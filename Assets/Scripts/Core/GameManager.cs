@@ -1,4 +1,8 @@
 using UnityEngine;
+using VampireSurvivors.Data;
+using VampireSurvivors.MetaProgression;
+using VampireSurvivors.UI;
+using VampireSurvivors.Wave;
 
 namespace VampireSurvivors.Core
 {
@@ -10,11 +14,11 @@ namespace VampireSurvivors.Core
         public float survivalTime = 0f;
         public bool isGameOver = false;
 
-        [Header("Enemy Spawning Config")]
+        [Header("Legacy Spawning Config (Fallback if WaveManager absent)")]
         public GameObject enemyPrefab;
         public float spawnInterval = 2.0f;
         public float spawnRadius = 10.0f;
-        public int maxEnemiesAlive = 15;
+        public int maxEnemiesAlive = 50;
         private float spawnTimer;
 
         private Transform playerTransform;
@@ -23,10 +27,17 @@ namespace VampireSurvivors.Core
         {
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
+
+            // Ensure Singletons are loaded
+            if (SaveManager.Instance == null) { }
+            if (UpgradeManager.Instance == null) { }
+            if (AchievementManager.Instance == null) { }
         }
 
         private void Start()
         {
+            Time.timeScale = 1f;
+
             if (enemyPrefab == null)
             {
 #if UNITY_EDITOR
@@ -39,26 +50,63 @@ namespace VampireSurvivors.Core
             {
                 playerTransform = player.transform;
             }
+
+            // Ensure WaveManager exists
+            if (WaveManager.Instance == null && FindObjectOfType<WaveManager>() == null)
+            {
+                GameObject wmGO = new GameObject("WaveManager");
+                wmGO.AddComponent<WaveManager>();
+            }
+
+            // Ensure DamageNumberPool exists
+            if (DamageNumberPool.Instance == null && FindObjectOfType<DamageNumberPool>() == null)
+            {
+                GameObject poolGO = new GameObject("DamageNumberPool");
+                poolGO.AddComponent<DamageNumberPool>();
+            }
+
+            // Ensure CameraJuice exists on Main Camera
+            if (Camera.main != null && Camera.main.GetComponent<CameraJuice>() == null)
+            {
+                Camera.main.gameObject.AddComponent<CameraJuice>();
+            }
+
+            // Ensure AudioManager exists
+            if (Audio.AudioManager.Instance == null && FindObjectOfType<Audio.AudioManager>() == null)
+            {
+                GameObject audioGO = new GameObject("AudioManager");
+                audioGO.AddComponent<Audio.AudioManager>();
+            }
+
+            // Ensure MainMenuManager exists
+            if (MainMenuManager.Instance == null && FindObjectOfType<MainMenuManager>() == null)
+            {
+                GameObject menuGO = new GameObject("MainMenuManager");
+                menuGO.AddComponent<MainMenuManager>();
+            }
         }
 
         private void Update()
         {
             if (isGameOver) return;
-
-            // PhĂ²ng trÆ°á»ng há»£p giĂ¡ trá»‹ trong Inspector bá»‹ chá»‰nh vá» 0 hoáº·c quĂ¡ nhá»
-            if (spawnInterval < 1.0f) spawnInterval = 2.0f;
+            if (MainMenuManager.Instance != null && MainMenuManager.Instance.isMenuOpen) return;
 
             survivalTime += Time.deltaTime;
 
-            // Giá»›i háº¡n sá»‘ lÆ°á»£ng quĂ¡i cĂ¹ng lĂºc trĂªn mĂ n hĂ¬nh (tá»‘i Ä‘a 15 quĂ¡i Ä‘á»ƒ trĂ¡nh giáº­t lag)
-            int currentEnemies = GameObject.FindGameObjectsWithTag("Enemy").Length;
-            if (currentEnemies >= maxEnemiesAlive) return;
-
-            spawnTimer += Time.deltaTime;
-            if (spawnTimer >= spawnInterval)
+            // Only run legacy spawner if WaveManager is NOT handling spawning
+            if (WaveManager.Instance == null)
             {
-                spawnTimer = 0f;
-                SpawnEnemyAroundPlayer();
+                if (spawnInterval < 1.0f) spawnInterval = 2.0f;
+
+                int currentEnemies = GameObject.FindGameObjectsWithTag("Enemy").Length;
+                if (currentEnemies >= maxEnemiesAlive) return;
+
+                spawnTimer += Time.deltaTime;
+                if (spawnTimer >= spawnInterval)
+                {
+                    spawnTimer = 0f;
+                    SpawnEnemyAroundPlayer();
+                }
             }
         }
 
@@ -90,8 +138,14 @@ namespace VampireSurvivors.Core
 
         public void GameOver()
         {
+            if (isGameOver) return;
             isGameOver = true;
             Debug.Log("Game Over! Total Survival Time: " + survivalTime.ToString("F1") + "s");
+
+            if (RunSummaryUI.Instance != null)
+            {
+                RunSummaryUI.Instance.ShowSummary(survivalTime >= 1200f);
+            }
         }
     }
 }

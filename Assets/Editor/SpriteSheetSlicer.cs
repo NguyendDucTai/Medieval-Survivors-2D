@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -32,6 +32,21 @@ namespace VampireSurvivors.EditorTools
             SliceSheet("Assets/Sprites/Characters/Hero_Ranger_Run.png", new string[] { "Hero_Ranger_Run_0", "Hero_Ranger_Run_1", "Hero_Ranger_Run_2", "Hero_Ranger_Run_3" });
             SliceSheet("Assets/Sprites/Characters/Hero_Ranger_Die.png", new string[] { "Hero_Ranger_Die_0", "Hero_Ranger_Die_1", "Hero_Ranger_Die_2", "Hero_Ranger_Die_3" });
 
+            // ShadowKnight (Rogue 64x64 frames, ppu 48)
+            SliceSheet("Assets/Sprites/Characters/Hero_Rogue_Idle.png", new string[] { "Hero_Rogue_Idle_0", "Hero_Rogue_Idle_1", "Hero_Rogue_Idle_2", "Hero_Rogue_Idle_3" }, 64, 64, 48);
+            SliceSheet("Assets/Sprites/Characters/Hero_Rogue_Run.png", new string[] { "Hero_Rogue_Run_0", "Hero_Rogue_Run_1", "Hero_Rogue_Run_2", "Hero_Rogue_Run_3" }, 64, 64, 48);
+            SliceSheet("Assets/Sprites/Characters/Hero_Rogue_Die.png", new string[] { "Hero_Rogue_Die_0", "Hero_Rogue_Die_1", "Hero_Rogue_Die_2", "Hero_Rogue_Die_3" }, 64, 64, 48);
+
+            // Archmage (Grand Mage: Idle 2 frames, Run 4 frames, Die 4 frames, 64x64, ppu 48)
+            SliceSheet("Assets/Sprites/Characters/Hero_Archmage_Idle.png", new string[] { "Hero_Archmage_Idle_0", "Hero_Archmage_Idle_1" }, 64, 64, 48);
+            SliceSheet("Assets/Sprites/Characters/Hero_Archmage_Run.png", new string[] { "Hero_Archmage_Run_0", "Hero_Archmage_Run_1", "Hero_Archmage_Run_2", "Hero_Archmage_Run_3" }, 64, 64, 48);
+            SliceSheet("Assets/Sprites/Characters/Hero_Archmage_Die.png", new string[] { "Hero_Archmage_Die_0", "Hero_Archmage_Die_1", "Hero_Archmage_Die_2", "Hero_Archmage_Die_3" }, 64, 64, 48);
+
+            // Archer (Marksman: Idle 4 frames, Run 4 frames, Die 4 frames, 64x64, ppu 48)
+            SliceSheet("Assets/Sprites/Characters/Hero_Archer_Idle.png", new string[] { "Hero_Archer_Idle_0", "Hero_Archer_Idle_1", "Hero_Archer_Idle_2", "Hero_Archer_Idle_3" }, 64, 64, 48);
+            SliceSheet("Assets/Sprites/Characters/Hero_Archer_Run.png", new string[] { "Hero_Archer_Run_0", "Hero_Archer_Run_1", "Hero_Archer_Run_2", "Hero_Archer_Run_3" }, 64, 64, 48);
+            SliceSheet("Assets/Sprites/Characters/Hero_Archer_Die.png", new string[] { "Hero_Archer_Die_0", "Hero_Archer_Die_1", "Hero_Archer_Die_2", "Hero_Archer_Die_3" }, 64, 64, 48);
+
             // 2. Enemies (Slime, Skeleton, Goblin, Bat, Boss Golem)
             SliceSheet("Assets/Sprites/Enemies/Slime_Hop.png", new string[] { "Slime_Hop_0", "Slime_Hop_1", "Slime_Hop_2", "Slime_Hop_3" });
             SliceSheet("Assets/Sprites/Enemies/Slime_Attack.png", new string[] { "Slime_Attack_0", "Slime_Attack_1", "Slime_Attack_2", "Slime_Attack_3" });
@@ -58,13 +73,16 @@ namespace VampireSurvivors.EditorTools
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("ÄĂƒ Cáº®T VĂ€ Gá»˜P TOĂ€N Bá»˜ HOáº T áº¢NH CHARACTERS & ENEMIES THĂ€NH CĂ”NG!");
+            Debug.Log("ĐÃ CẮT VÀ GỘP TOÀN BỘ HOẠT ẢNH CHARACTERS & ENEMIES THÀNH CÔNG!");
         }
 
         private static void AutoSliceSheets()
         {
             string[] testPaths = new string[] {
                 "Assets/Sprites/Characters/Hero_Knight_Die.png",
+                "Assets/Sprites/Characters/Hero_Rogue_Idle.png",
+                "Assets/Sprites/Characters/Hero_Archmage_Idle.png",
+                "Assets/Sprites/Characters/Hero_Archer_Idle.png",
                 "Assets/Sprites/Enemies/Skeleton_Walk.png",
                 "Assets/Sprites/Enemies/Boss_Golem_Attack.png"
             };
@@ -89,7 +107,7 @@ namespace VampireSurvivors.EditorTools
             }
         }
 
-        private static void SliceSheet(string path, string[] frameNames)
+        private static void SliceSheet(string path, string[] frameNames, int frameWidth = 16, int frameHeight = 16, int ppu = 16)
         {
             if (!File.Exists(path)) return;
 
@@ -98,7 +116,7 @@ namespace VampireSurvivors.EditorTools
 
             ti.textureType = TextureImporterType.Sprite;
             ti.spriteImportMode = SpriteImportMode.Multiple;
-            ti.spritePixelsPerUnit = 16;
+            ti.spritePixelsPerUnit = ppu;
             ti.filterMode = FilterMode.Point;
             ti.textureCompression = TextureImporterCompression.Uncompressed;
 
@@ -108,7 +126,7 @@ namespace VampireSurvivors.EditorTools
                 sheet[i] = new SpriteMetaData
                 {
                     name = frameNames[i],
-                    rect = new Rect(i * 16, 0, 16, 16),
+                    rect = new Rect(i * frameWidth, 0, frameWidth, frameHeight),
                     alignment = (int)SpriteAlignment.Center,
                     pivot = new Vector2(0.5f, 0.5f)
                 };
@@ -125,6 +143,9 @@ namespace VampireSurvivors.EditorTools
             UpdateClipsForCharacter("Knight", "Assets/Sprites/Characters/Hero_Knight_Idle.png", "Assets/Sprites/Characters/Hero_Knight_Run.png", "Assets/Sprites/Characters/Hero_Knight_Die.png");
             UpdateClipsForCharacter("Mage", "Assets/Sprites/Characters/Hero_Mage_Idle.png", "Assets/Sprites/Characters/Hero_Mage_Run.png", "Assets/Sprites/Characters/Hero_Mage_Die.png");
             UpdateClipsForCharacter("Ranger", "Assets/Sprites/Characters/Hero_Ranger_Idle.png", "Assets/Sprites/Characters/Hero_Ranger_Run.png", "Assets/Sprites/Characters/Hero_Ranger_Die.png");
+            UpdateClipsForCharacter("ShadowKnight", "Assets/Sprites/Characters/Hero_Rogue_Idle.png", "Assets/Sprites/Characters/Hero_Rogue_Run.png", "Assets/Sprites/Characters/Hero_Rogue_Die.png");
+            UpdateClipsForCharacter("Archmage", "Assets/Sprites/Characters/Hero_Archmage_Idle.png", "Assets/Sprites/Characters/Hero_Archmage_Run.png", "Assets/Sprites/Characters/Hero_Archmage_Die.png");
+            UpdateClipsForCharacter("Archer", "Assets/Sprites/Characters/Hero_Archer_Idle.png", "Assets/Sprites/Characters/Hero_Archer_Run.png", "Assets/Sprites/Characters/Hero_Archer_Die.png");
 
             // --- ENEMIES ---
             UpdateClipsForEnemy("Slime", "Assets/Sprites/Enemies/Slime_Hop.png", "Assets/Sprites/Enemies/Slime_Attack.png", "Assets/Sprites/Enemies/Slime_Die.png", 6f, 6f, 6f);

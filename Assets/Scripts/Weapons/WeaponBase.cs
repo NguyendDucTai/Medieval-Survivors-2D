@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using VampireSurvivors.Player;
 
 namespace VampireSurvivors.Weapons
@@ -18,6 +18,12 @@ namespace VampireSurvivors.Weapons
         private void Start()
         {
             playerStats = GetComponentInParent<PlayerStats>();
+            // If WeaponInventory is present, it handles attacks and evolutions
+            WeaponInventory inv = GetComponentInParent<WeaponInventory>();
+            if (inv != null)
+            {
+                enabled = false;
+            }
         }
 
         private void Update()
@@ -34,20 +40,44 @@ namespace VampireSurvivors.Weapons
 
         protected virtual void Attack()
         {
+            if (projectilePrefab == null) return;
+
             Transform nearestEnemy = FindNearestEnemy();
-            if (nearestEnemy == null) return; // Chá»‰ báº¯n khi phĂ¡t hiá»‡n quĂ¡i trong táº§m báº¯n!
+            Vector2 attackDir;
 
-            Vector2 attackDir = (nearestEnemy.position - transform.position).normalized;
+            bool isMelee = projectilePrefab.GetComponent<MeleeSlash>() != null;
 
-            if (projectilePrefab != null)
+            if (nearestEnemy != null)
             {
-                GameObject projGO = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
-                Projectile proj = projGO.GetComponent<Projectile>();
-                if (proj != null)
-                {
-                    float mult = playerStats != null ? playerStats.damageMultiplier : 1f;
-                    proj.Setup(attackDir, mult);
-                }
+                attackDir = (nearestEnemy.position - transform.position).normalized;
+            }
+            else
+            {
+                // When no enemy is detected within range, fire/slash in facing direction
+                SpriteRenderer sr = GetComponentInParent<SpriteRenderer>();
+                float facingX = (sr != null && sr.flipX) ? -1f : 1f;
+                attackDir = new Vector2(facingX, 0f);
+            }
+
+            Vector3 spawnPos = transform.position;
+            if (isMelee)
+            {
+                spawnPos += (Vector3)(attackDir * 0.85f);
+            }
+
+            GameObject spawnedGO = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+            float mult = playerStats != null ? playerStats.damageMultiplier : 1f;
+
+            Projectile proj = spawnedGO.GetComponent<Projectile>();
+            if (proj != null)
+            {
+                proj.Setup(attackDir, mult);
+            }
+
+            MeleeSlash slash = spawnedGO.GetComponent<MeleeSlash>();
+            if (slash != null)
+            {
+                slash.Setup(attackDir, mult);
             }
         }
 

@@ -38,5 +38,7 @@ sysinfo.txt
 *.apk
 *.aab
 *.unitypackage
+.dotnet/
 *.app
 crashlytics-build.properties
+scratch/

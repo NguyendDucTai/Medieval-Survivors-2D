@@ -65,14 +65,18 @@
 ## 🔄 5. QUY TRÌNH QUẢN LÝ MÃ NGUỒN VỚI GIT (GIT WORKFLOW)
 * Dự án đã được khởi tạo Git repo kết nối với GitHub.
 * Đã cấu hình `.gitignore` chuẩn Unity (loại trừ `Library/`, `Temp/`, `Logs/`, `UserSettings/`).
+* ⚠️ **QUY TẮC PUSH GITHUB:**
+  * **TUYỆT ĐỐI KHÔNG TỰ Ý CHẠY `git push` LÊN GITHUB.**
+  * Chỉ làm việc, lưu trữ ở local commit hoặc working directory.
+  * **CHỈ ĐƯỢC PUSH khi người dùng yêu cầu trực tiếp** (ví dụ: "push lên github đi", "push code").
 * **Lệnh Rollback nhanh khi có lỗi:**
   ```powershell
   git restore .
   git clean -fd
   ```
-* **Lệnh lưu mốc mới sau khi hoàn thành tính năng:**
+* **Lệnh lưu mốc mới ở local (chỉ push khi người dùng yêu cầu):**
   ```powershell
   git add .
   git commit -m "Mô tả tính năng"
-  git push origin main
+  # Chỉ chạy git push khi có lệnh từ người dùng!
   ```
