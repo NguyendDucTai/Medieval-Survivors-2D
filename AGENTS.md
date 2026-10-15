@@ -37,46 +37,53 @@
 
 ---
 
-## 📁 4. CẤU TRÚC ASSETS & SCRIPTS HIỆN TẠI (RESTORED STATE)
-1. **Nhân vật người chơi (`Assets/Sprites/Characters/`):**
-   * **Hiệp sĩ (Knight):** `Hero_Knight_Idle.png` (32x16, 2 frames), `Hero_Knight_Run.png` (64x16, 4 frames), `Hero_Knight_Die.png` (64x16, 4 frames).
-   * **Pháp sư (Mage):** `Hero_Mage_Idle.png` (32x16, 2 frames), `Hero_Mage_Run.png` (64x16, 4 frames), `Hero_Mage_Die.png` (64x16, 4 frames).
-   * **Cung thủ (Ranger):** `Hero_Ranger_Idle.png` (32x16, 2 frames), `Hero_Ranger_Run.png` (64x16, 4 frames), `Hero_Ranger_Die.png` (64x16, 4 frames).
-2. **Kẻ địch (`Assets/Sprites/Enemies/`):**
-   * **Slime:** `Slime_Hop.png`, `Slime_Attack.png`, `Slime_Die.png`.
-   * **Skeleton:** `Skeleton_Walk.png`, `Skeleton_Attack.png`, `Skeleton_Die.png`.
-   * **Goblin:** `Goblin_Walk.png`, `Goblin_Attack.png`, `Goblin_Die.png`.
-   * **Bat:** `Bat_Fly.png`, `Bat_Attack.png`, `Bat_Die.png`.
-   * **Boss Golem:** `Boss_Golem_Walk.png`, `Boss_Golem_Attack.png`, `Boss_Golem_Die.png`.
-3. **Vũ khí & Vật phẩm:**
-   * Vũ khí: `Weapon_HolySword.png`, `Weapon_Fireball.png`, `Weapon_Arrow.png`, `Weapon_MagicStaff.png`, `VFX_Slash.png`.
-   * Vật phẩm: `ExpGem_Blue`, `ExpGem_Red`, `ExpGem_Green`, `HealthPotion`, `Magnet`.
-4. **Scenes & Prefabs:**
-   * Scene chính: `Assets/Scenes/SampleScene.unity`.
-   * Prefabs: `Assets/Prefabs/Player.prefab`, `Enemy_Slime.prefab`, `Enemy_Skeleton.prefab`, `Enemy_Goblin.prefab`, `Enemy_Bat.prefab`, `Enemy_BossGolem.prefab`, `ExpGem.prefab`, `Projectile_Fireball.prefab`.
-5. **Mã nguồn Scripts (`Assets/Scripts/`):**
-   * Player: `PlayerController.cs`, `PlayerStats.cs`, `CameraFollow.cs`.
-   * Enemies: `EnemyAI.cs`, `EnemyStats.cs`.
-   * Weapons: `WeaponBase.cs`, `Projectile.cs`.
-   * Core & UI: `GameManager.cs`, `UIManager.cs`, `ExpGem.cs`.
+## 📁 4. CẤU TRÚC ASSETS & SCRIPTS HIỆN TẠI (UP-TO-DATE ARCHITECTURE)
+1. **Nhân vật người chơi (5 Heroes - `Assets/Sprites/Characters/`):**
+   * **Hiệp sĩ (Sir Roland):** Cận chiến quét kiếm Thánh Kiếm (Holy Broadsword), giáp cao, chống chịu.
+   * **Sát thủ Bóng Đêm (Valen / Shadow Knight):** Lưỡi Đao Hắc Ám (Dark Crescent) chém cực nhanh, xuyên giáp.
+   * **Pháp sư Nguyên Tố (Ignis / Mage):** Phóng Cầu Lửa Hỏa Ngục (Fireball) tự tìm mục tiêu và nổ AOE.
+   * **Đại Pháp Sư Sét (Aurelius / Archmage):** Gậy Thần Bão Tố (Lightning Staff) giáng sấm sét diện rộng.
+   * **Cung thủ Bão Gió (Sylph / Ranger / Archer):** Cung Tên Bão Tố (Wind Bow / Storm Bow) bắn tầm xa xuyên thấu.
+   * *Lưu ý ảnh chân dung Hero Selection:* Ưu tiên lấy ảnh chân dung 1 frame (`Hero_Knight.png`, `Hero_Mage.png`, `Hero_Ranger.png`). Nếu hero không có ảnh chân dung riêng lẻ (Rogue, Archmage), code tự động lấy Frame 0 từ hoạt ảnh `Idle` với `FilterMode.Point`.
+
+2. **Giao diện Menu Chính & Hub Chọn Màn (`Assets/Scripts/UI/MainMenuManager.cs`):**
+   * **Màn hình Tiêu đề (Title Screen):** Tiêu đề động lượn sóng nhẹ, hiệu ứng ánh sáng hào quang, các nút bấm tùy biến (Start, Heroes, Maps, Options) gắn `UIButtonJuice`.
+   * **Modal Chọn Hero (Hero Select):** Khung `Frame_HeroSelection.png`, ảnh chân dung lớn bên trái (floating nhẹ, không breathing để giữ pixel sắc nét), 5 ô slot mini bên dưới hiển thị ảnh thu nhỏ của 5 hero, bảng thông tin chỉ số/đặc tính chữ tự xuống dòng (`Wrap`) vừa vặn khung giấy da, nút Confirm khớp 100% với nút vẽ sẵn.
+   * **Modal Chọn Bản Đồ (Map Select):** Khung `Frame_MapSelection.png`, preview map trung tâm giữ nguyên độ sắc nét pixel (không rung lắc/thở), 2 mũi tên chuyển map ◀ và ▶, bảng thông tin giấy da chữ nâu sẫm tương phản cao, hỗ trợ 3 map:
+     1. Emerald Meadow (Rừng cỏ xanh - Tiêu chuẩn)
+     2. Castle Ruins (Tàn tích lâu đài - Khó, +50% Vàng)
+     3. Infernal Volcano (Núi lửa địa ngục - Ác mộng, +150% Vàng)
+   * **Modal Cài Đặt (Options):** Khung `Frame_Options.png`, thanh trượt chỉnh âm lượng Nhạc nền (Music) và Hiệu ứng (SFX), nút gạt Tắt tiếng (Mute), hướng dẫn phím điều khiển `[WASD / ESC / Chuột]`.
+
+3. **Hệ thống Hiệu ứng & Nước ép Game (`Assets/Scripts/UI/UIButtonJuice.cs`):**
+   * Tự động tạo phản hồi xúc giác cho UI: phóng to khi rê chuột (`hoverScale`), nảy khi nhấn (`pressScale`), phát âm thanh (`click`, `pickup`), thở (`breathing`), chuyển động lắc lư (`floating`), nhấp nháy hào quang (`colorPulse`).
+
+4. **Hệ thống Gameplay Nâng Cao (Meta-Progression & Wave Director):**
+   * **Meta-Progression (`Assets/Scripts/MetaProgression/`):** Nâng cấp chỉ số vĩnh viễn trong Shop bằng Vàng kiếm được sau mỗi trận (Sát thương, Giáp, Máu tối đa, Tốc độ, Nhặt đồ, May mắn).
+   * **Tiến hóa Vũ khí (Weapon Evolutions):** Vũ khí tối thượng khi kết hợp trang bị (Excalibur, Meteor, Singularity, Tempest Arrow).
+   * **8 Cổ vật Bị động (Passive Relics - `Assets/Sprites/Passives/`):** Iron Armor, Wind Quiver, Spell Tome, Clover, Crown, Blood Chalice, Greed Coin, Magnet Talisman.
+   * **Đạo diễn Đợt Quái (`Assets/Scripts/Wave/WaveManager.cs`):** Thiết kế đợt quái tự động tăng tiến độ khó trong 20 phút sinh tồn, triệu hồi Boss Golem ở các mốc thời gian cao trào.
+
+5. **Camera & Vật lý:**
+   * `CameraFollow.cs`: Tách biệt hoàn toàn độ rung chấn thương (Trauma shake) khỏi tọa độ camera, bật nội suy `Rigidbody2D.interpolation` giúp camera di chuyển siêu mượt, không giật hình.
 
 ---
 
 ## 🔄 5. QUY TRÌNH QUẢN LÝ MÃ NGUỒN VỚI GIT (GIT WORKFLOW)
-* Dự án đã được khởi tạo Git repo kết nối với GitHub.
+* Dự án đã được đồng bộ với GitHub: `https://github.com/NguyendDucTai/Medieval-Survivors-2D`
 * Đã cấu hình `.gitignore` chuẩn Unity (loại trừ `Library/`, `Temp/`, `Logs/`, `UserSettings/`).
+* Nhánh chính: `main`. Toàn bộ tính năng đã được đẩy lên GitHub qua 5 commits chuẩn `feat(...)`.
 * ⚠️ **QUY TẮC PUSH GITHUB:**
-  * **TUYỆT ĐỐI KHÔNG TỰ Ý CHẠY `git push` LÊN GITHUB.**
-  * Chỉ làm việc, lưu trữ ở local commit hoặc working directory.
+  * **TUYỆT ĐỐI KHÔNG TỰ Ý CHẠY `git push` LÊN GITHUB NẾU NGƯỜI DÙNG CHƯA YÊU CẦU.**
+  * Chỉ commit ở local branch khi hoàn thành tính năng.
   * **CHỈ ĐƯỢC PUSH khi người dùng yêu cầu trực tiếp** (ví dụ: "push lên github đi", "push code").
 * **Lệnh Rollback nhanh khi có lỗi:**
   ```powershell
   git restore .
   git clean -fd
   ```
-* **Lệnh lưu mốc mới ở local (chỉ push khi người dùng yêu cầu):**
+* **Lệnh lưu mốc mới ở local:**
   ```powershell
   git add .
-  git commit -m "Mô tả tính năng"
-  # Chỉ chạy git push khi có lệnh từ người dùng!
+  git commit -m "feat/fix: mô tả tính năng"
   ```
