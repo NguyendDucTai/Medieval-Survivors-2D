@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!1 &4822799081321223856
 GameObject:
@@ -174,12 +174,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Player.PlayerStats
   maxHealth: 100
   currentHealth: 0
+  armor: 0
+  hpRegen: 0
+  reviveCount: 0
   moveSpeed: 5
   damageMultiplier: 1
   pickupRadius: 3
+  cooldownReduction: 0
+  critChance: 0.05
+  critMultiplier: 2
+  goldMultiplier: 1
+  expMultiplier: 1
   currentLevel: 1
   currentExp: 0
   expToNextLevel: 100
+  inRunGold: 0
+  inRunKills: 0
+  inRunDamageDealt: 0
 --- !u!114 &5058867991100862819
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,8 +237,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b769751a4a9f81d4dab63378ae3ceada, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Weapons.WeaponBase
-  weaponName: Fireball
-  projectilePrefab: {fileID: 2548112507554496352, guid: ec5eb037288d10943804dd929083d547, type: 3}
-  fireRate: 1.2
-  attackRange: 9
+  weaponName: Holy Sword
+  projectilePrefab: {fileID: 2548112507554496352, guid: b8805c23f4567890b234567890bcdef0, type: 3}
+  fireRate: 1.3
+  attackRange: 3.5
   level: 1

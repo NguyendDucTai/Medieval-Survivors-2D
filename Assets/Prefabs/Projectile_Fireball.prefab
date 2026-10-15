@@ -145,3 +145,4 @@ MonoBehaviour:
   damage: 15
   lifeTime: 3
   pierceCount: 1
+  isCrit: 0
