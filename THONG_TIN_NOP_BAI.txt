@@ -1,0 +1,31 @@
+﻿================================================================================
+                    BAI NOP DO AN MON HOC PRU213 - FPT UNIVERSITY
+                         DO AN: MEDIEVAL SURVIVORS 2D
+================================================================================
+
+1. THONG TIN SINH VIEN:
+   - Ho va ten: Nguyen Duc Tai
+   - Lop mon hoc: SE1969
+   - MSSV: [Dien MSSV neu can]
+   - Kho ma nguon GitHub: https://github.com/NguyendDucTai/Medieval-Survivors-2D
+
+2. LINK MINH CHUNG GEMINI WEB (AI ASSISTANCE / PROMPT CONVERSATIONS):
+   https://share.gemini.google/tD9FdoKm3v4b
+
+3. HUONG DAN KHOI CHAY DU AN TREN UNITY:
+   - Phien ban Unity khuyen nghi: Unity 6 (6000.4.12f1) hoac moi hon, Render Pipeline: URP 2D.
+   - Thu muc nen da duoc loai bo cache "Library/" de toi uu dung luong nop bai.
+   - Khi mo du an lan dau qua Unity Hub, Unity se tu dong tai tao lai Library va nap packages.
+   - Scene chinh de choi game: Assets/Scenes/SampleScene.unity
+   - Nhan nut "Play" de trai nghiem toan bo game.
+
+4. BANG PHIM TAT DIEU KHIEN & CHAM DIEM NHANH:
+   - W, A, S, D / Phim mui ten : Di chuyen nhan vat 8 huong linh hoat.
+   - Enter / Space             : Bat dau tran chien ngay tu Title Screen.
+   - H                         : Mo Modal chon Hero (Hiep si, Sat thu, Phap su, Cung thu).
+   - M                         : Mo Modal chon Ban do (3 Maps: Meadow, Ruins, Volcano).
+   - O                         : Mo Menu cai dat am luong & huong dan (Options).
+   - Phim 1, 2, 3, 4, 5, 6     : Phim tat doi truc tiep Hero khi dang trong tran dau de test vu khi.
+   - Chuot trai                : Chon ky nang khi len cap, tuong tac UI.
+
+================================================================================

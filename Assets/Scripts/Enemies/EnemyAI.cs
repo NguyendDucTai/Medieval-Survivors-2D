@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using VampireSurvivors.Player;
 
 namespace VampireSurvivors.Enemies
@@ -69,22 +69,35 @@ namespace VampireSurvivors.Enemies
             }
         }
 
+        private void OnCollisionEnter2D(Collision2D collision)
+        {
+            TryAttackPlayer(collision.gameObject);
+        }
+
         private void OnCollisionStay2D(Collision2D collision)
         {
-            if (isDead) return;
+            TryAttackPlayer(collision.gameObject);
+        }
 
-            if (collision.gameObject.CompareTag("Player"))
+        private void TryAttackPlayer(GameObject target)
+        {
+            if (isDead || target == null) return;
+
+            if (target.CompareTag("Player"))
             {
-                if (animator != null && Time.time - lastAttackTime >= attackCooldown)
+                if (Time.time - lastAttackTime >= attackCooldown)
                 {
-                    animator.SetTrigger("Attack");
                     lastAttackTime = Time.time;
-                }
+                    if (animator != null)
+                    {
+                        animator.SetTrigger("Attack");
+                    }
 
-                PlayerStats playerStats = collision.gameObject.GetComponent<PlayerStats>();
-                if (playerStats != null)
-                {
-                    playerStats.TakeDamage(stats.attackDamage * Time.deltaTime);
+                    PlayerStats playerStats = target.GetComponent<PlayerStats>();
+                    if (playerStats != null)
+                    {
+                        playerStats.TakeDamage(stats.attackDamage);
+                    }
                 }
             }
         }

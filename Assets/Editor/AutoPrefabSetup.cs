@@ -534,7 +534,8 @@ namespace VampireSurvivors.EditorTools
             GameObject golemPrefab = CreateEnemyPrefab("Enemy_BossGolem", "Assets/Sprites/Enemies/Boss_Golem.png", "Assets/Animations/Enemies/Boss_Golem_Controller.controller", gemPrefab, 250f, 1.0f, 25f);
 
             // 8. Player Prefab
-            Sprite heroSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Characters/Hero_Knight.png");
+            Sprite heroSprite = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Characters/Hero_Knight_Idle.png")
+                .OfType<Sprite>().FirstOrDefault();
             GameObject playerGO = new GameObject("Player");
             SpriteRenderer playerSR = playerGO.AddComponent<SpriteRenderer>();
             playerSR.sprite = heroSprite;
