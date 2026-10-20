@@ -46,6 +46,9 @@ namespace VampireSurvivors.Player
 
         private bool isInvulnerable = false;
         private SpriteRenderer spriteRenderer;
+        private float lastDamageTime = -10f;
+        public float damageCooldown = 0.25f; // Brief invulnerability window (i-frame)
+        private float lastShakeTime = -10f;
 
         private void Awake()
         {
@@ -93,6 +96,8 @@ namespace VampireSurvivors.Player
         public void TakeDamage(float amount)
         {
             if (isInvulnerable || currentHealth <= 0) return;
+            if (Time.time - lastDamageTime < damageCooldown) return;
+            lastDamageTime = Time.time;
 
             // Apply flat armor reduction (minimum 1 damage)
             float finalDamage = Mathf.Max(1f, amount - armor);
@@ -100,9 +105,15 @@ namespace VampireSurvivors.Player
             currentHealth = Mathf.Max(0, currentHealth);
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
-            // Screen shake
-            var cameraJuice = Camera.main != null ? Camera.main.GetComponent<Core.CameraJuice>() : null;
-            if (cameraJuice != null) cameraJuice.Shake(0.15f, 0.2f);
+            // Subtle, crisp screen bump with cooldown to prevent jarring camera spam
+            if (Time.time - lastShakeTime > 0.25f)
+            {
+                lastShakeTime = Time.time;
+                var cameraJuice = Camera.main != null ? Camera.main.GetComponent<Core.CameraJuice>() : null;
+                if (cameraJuice != null) cameraJuice.Shake(0.04f, 0.12f);
+            }
+
+            StartCoroutine(FlashDamageFeedback());
 
             if (currentHealth <= 0)
             {
@@ -113,6 +124,20 @@ namespace VampireSurvivors.Player
                 else
                 {
                     Die();
+                }
+            }
+        }
+
+        private IEnumerator FlashDamageFeedback()
+        {
+            if (spriteRenderer != null)
+            {
+                Color orig = spriteRenderer.color;
+                spriteRenderer.color = new Color(1f, 0.35f, 0.35f, 0.85f);
+                yield return new WaitForSeconds(0.12f);
+                if (spriteRenderer != null && !isInvulnerable)
+                {
+                    spriteRenderer.color = orig;
                 }
             }
         }

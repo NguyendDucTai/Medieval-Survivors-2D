@@ -75,6 +75,7 @@ namespace VampireSurvivors.UI
         private Text txtHeroStats;
         private Text txtHeroPassive;
         private List<GameObject> heroSlotIndicators = new List<GameObject>();
+        private List<GameObject> heroSlotButtons = new List<GameObject>();
 
         // Map Select UI references
         private GameObject mapPreviewBoxGO;
@@ -110,6 +111,24 @@ namespace VampireSurvivors.UI
             LoadUISprites();
             SetupHeroData();
             SetupMapData();
+
+#if UNITY_EDITOR
+            // Automatically turn off Gizmos in Game View so the white wireframe sphere/crosshair doesn't cover UI
+            try
+            {
+                var gameViewType = System.Type.GetType("UnityEditor.GameView, UnityEditor");
+                if (gameViewType != null)
+                {
+                    var showGizmosProp = gameViewType.GetProperty("showGizmos", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var activeGameView = UnityEditor.EditorWindow.GetWindow(gameViewType, false, null, false);
+                    if (activeGameView != null && showGizmosProp != null)
+                    {
+                        showGizmosProp.SetValue(activeGameView, false);
+                    }
+                }
+            }
+            catch { }
+#endif
         }
 
         private void LoadUISprites()
@@ -131,6 +150,9 @@ namespace VampireSurvivors.UI
             selectedMapIndex = Mathf.Clamp(PlayerPrefs.GetInt("SelectedMapIndex", 0), 0, maps.Count - 1);
 
             BuildMenuUI();
+
+            // Setup in-game background terrain with the currently selected map
+            ApplySelectedMapToEnvironment();
 
             Time.timeScale = 0f;
             isMenuOpen = true;
@@ -163,6 +185,24 @@ namespace VampireSurvivors.UI
             {
                 if (optionsModal != null) OpenOptions(!optionsModal.activeSelf);
             }
+            if (heroSelectModal != null && heroSelectModal.activeSelf)
+            {
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) PrevHero();
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) NextHero();
+                for (int k = 0; k < heroes.Count && k < 9; k++)
+                {
+                    if (Input.GetKeyDown(KeyCode.Alpha1 + k) || Input.GetKeyDown(KeyCode.Keypad1 + k))
+                    {
+                        SelectHero(k);
+                    }
+                }
+            }
+            else if (mapSelectModal != null && mapSelectModal.activeSelf)
+            {
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) PrevMap();
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) NextMap();
+            }
+
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if (heroSelectModal != null && heroSelectModal.activeSelf) OpenHeroSelect(false);
@@ -301,11 +341,24 @@ namespace VampireSurvivors.UI
                 passiveDescription = "Bắn liên hoàn các mũi tên tầm cực xa xuyên thủng hàng ngũ quái vật, tốc độ bắn siêu nhanh."
             });
 
-            heroes[0].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Knight.png", "Assets/Sprites/Characters/Hero_Knight_Idle.png");
-            heroes[1].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Rogue.png", "Assets/Sprites/Characters/Hero_Rogue_Idle.png") ?? heroes[0].portraitSprite;
-            heroes[2].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Mage.png", "Assets/Sprites/Characters/Hero_Mage_Idle.png");
-            heroes[3].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Archmage.png", "Assets/Sprites/Characters/Hero_Archmage_Idle.png") ?? heroes[2].portraitSprite;
-            heroes[4].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Ranger.png", "Assets/Sprites/Characters/Hero_Ranger_Idle.png");
+            heroes.Add(new HeroData
+            {
+                heroKey = "Archer",
+                heroName = "AERIS - XẠ THỦ THẦN PHONG",
+                weaponName = "Cung Thần Phong (Storm Bow)",
+                hp = 90,
+                speed = 5.8f,
+                mightPercent = 35,
+                armor = 1,
+                passiveDescription = "Bắn liên hoàn các mũi tên ma thuật bão tố cuồng phong xuyên thấu kẻ địch với tốc độ bắn cực nhanh."
+            });
+
+            heroes[0].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Knight_Idle.png");
+            heroes[1].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Rogue_Idle.png");
+            heroes[2].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Mage_Idle.png");
+            heroes[3].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Archmage_Idle.png");
+            heroes[4].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Ranger_Idle.png");
+            heroes[5].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Archer_Idle.png");
         }
 
         private void SetupMapData()
@@ -320,6 +373,16 @@ namespace VampireSurvivors.UI
                 monstersDescription = "Quái vật: Slime Xanh, Dơi Rừng, Hồn Ma Cổ Xưa",
                 hazardDescription = "Địa hình rộng rãi, bằng phẳng. Rất thích hợp để làm quen bảng kỹ năng và thử nghiệm build.",
                 goldBonusValue = 1.0f
+            });
+
+            maps.Add(new MapData
+            {
+                mapName = "SCORCHING DESERT (SA MẠC BÃO CÁT)",
+                difficultyStars = "⭐⭐⭐☆☆ (Thử Thách Vừa)",
+                goldMultiplier = "VÀNG x1.3 | EXP x1.2",
+                monstersDescription = "Quái vật: Bọ Cạp Sa Mạc, Xác Ướp Lăng Mộ, Giun Cát Cổ Đại",
+                hazardDescription = "Bão cát cuộn xoáy định kỳ làm giảm 25% tầm nhìn, bãi cát lún làm giảm tốc độ di chuyển nhưng rơi nhiều Vàng hơn 30%!",
+                goldBonusValue = 1.3f
             });
 
             maps.Add(new MapData
@@ -343,30 +406,40 @@ namespace VampireSurvivors.UI
             });
 
             maps[0].mapPreviewSprite = LoadSpriteAtPath("Assets/Sprites/Maps/Map_EmeraldMeadow.png");
-            maps[1].mapPreviewSprite = LoadSpriteAtPath("Assets/Sprites/Maps/Map_CastleRuins.png") ?? maps[0].mapPreviewSprite;
-            maps[2].mapPreviewSprite = LoadSpriteAtPath("Assets/Sprites/Maps/Map_InfernalVolcano.png") ?? maps[0].mapPreviewSprite;
+            maps[1].mapPreviewSprite = LoadSpriteAtPath("Assets/Sprites/Maps/Map_ScorchingDesert.png") ?? maps[0].mapPreviewSprite;
+            maps[2].mapPreviewSprite = LoadSpriteAtPath("Assets/Sprites/Maps/Map_CastleRuins.png") ?? maps[0].mapPreviewSprite;
+            maps[3].mapPreviewSprite = LoadSpriteAtPath("Assets/Sprites/Maps/Map_InfernalVolcano.png") ?? maps[0].mapPreviewSprite;
         }
 
-        private Sprite LoadHeroPortrait(string singlePortraitPath, string idlePath)
+        private Sprite LoadHeroPortrait(string idlePath)
         {
-            // 1. If standalone portrait exists, load it directly
-            if (!string.IsNullOrEmpty(singlePortraitPath) && System.IO.File.Exists(singlePortraitPath))
-            {
-                Sprite s = LoadSingleFrameSprite(singlePortraitPath);
-                if (s != null) return s;
-            }
+            if (string.IsNullOrEmpty(idlePath)) return null;
 
-            // 2. Fallback: extract 1 frame (frame 0) from idle animation sheet
-            if (!string.IsNullOrEmpty(idlePath) && System.IO.File.Exists(idlePath))
+#if UNITY_EDITOR
+            var allAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(idlePath);
+            foreach (var asset in allAssets)
             {
-                return LoadSingleFrameSprite(idlePath);
+                if (asset is Sprite s)
+                {
+                    return s;
+                }
             }
-
-            return null;
+#endif
+            return LoadSingleFrameSprite(idlePath);
         }
 
         private Sprite LoadSingleFrameSprite(string path)
         {
+#if UNITY_EDITOR
+            var allAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path);
+            foreach (var asset in allAssets)
+            {
+                if (asset is Sprite s)
+                {
+                    return s;
+                }
+            }
+#endif
             if (System.IO.File.Exists(path))
             {
                 try
@@ -383,21 +456,22 @@ namespace VampireSurvivors.UI
                 }
                 catch { }
             }
-#if UNITY_EDITOR
-            var allAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path);
-            foreach (var asset in allAssets)
-            {
-                if (asset is Sprite s)
-                {
-                    return s;
-                }
-            }
-#endif
             return null;
         }
 
         private Sprite LoadSpriteAtPath(string path)
         {
+#if UNITY_EDITOR
+            Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (s != null) return s;
+
+            Texture2D tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (tex != null)
+            {
+                tex.filterMode = FilterMode.Bilinear;
+                return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            }
+#endif
             if (System.IO.File.Exists(path))
             {
                 try
@@ -406,23 +480,12 @@ namespace VampireSurvivors.UI
                     Texture2D fileTex = new Texture2D(2, 2);
                     if (fileTex.LoadImage(data))
                     {
-                        fileTex.filterMode = FilterMode.Point;
+                        fileTex.filterMode = FilterMode.Bilinear;
                         return Sprite.Create(fileTex, new Rect(0, 0, fileTex.width, fileTex.height), new Vector2(0.5f, 0.5f), 100f);
                     }
                 }
                 catch { }
             }
-#if UNITY_EDITOR
-            Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            if (s != null) return s;
-
-            Texture2D tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (tex != null)
-            {
-                tex.filterMode = FilterMode.Point;
-                return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-            }
-#endif
             return null;
         }
 
@@ -532,9 +595,9 @@ namespace VampireSurvivors.UI
 
             btn.onClick.AddListener(onClick);
 
-            // Attach juice component with direct click fallback
+            // Attach juice component without double-firing clicks
             UIButtonJuice juice = go.AddComponent<UIButtonJuice>();
-            juice.onClickAction = onClick; // Fallback click detection
+            juice.onClickAction = null; // Handled exclusively by Button.onClick to prevent double-click jumps
             juice.hoverScale = hoverScale;
             juice.pressScale = pressScale;
             juice.enableBreathing = breathing;
@@ -573,11 +636,11 @@ namespace VampireSurvivors.UI
             if (heroFrameSprite != null) frameImg.sprite = heroFrameSprite;
             else frameImg.color = new Color(0.12f, 0.1f, 0.08f, 0.95f);
 
-            // Left Box: Hero Portrait Preview (Stable, no breathing to preserve pixel art)
+            // Left Box: Hero Portrait Preview (Stable, centered inside left carved frame, no breathing to preserve pixel art)
             portraitBoxGO = CreateUIObject("PortraitBox", frameGO.transform);
             RectTransform pBoxRect = portraitBoxGO.GetComponent<RectTransform>();
-            pBoxRect.anchoredPosition = new Vector2(-315, 20);
-            pBoxRect.sizeDelta = new Vector2(240, 270);
+            pBoxRect.anchoredPosition = new Vector2(-252, 22);
+            pBoxRect.sizeDelta = new Vector2(240, 260);
 
             // Aura glow behind portrait
             GameObject glowGO = CreateUIObject("PortraitGlow", portraitBoxGO.transform);
@@ -605,53 +668,95 @@ namespace VampireSurvivors.UI
             portraitJuice.enableBreathing = false;
             portraitJuice.hoverScale = 1.05f;
 
-            // Right Box: Dynamic Text Form inside parchment area
+            // Right Box: Dynamic Text Form inside parchment area - Centered & Aligned with Golden Frame
             infoBoxGO = CreateUIObject("InfoBox", frameGO.transform);
             RectTransform infoRect = infoBoxGO.GetComponent<RectTransform>();
-            infoRect.anchoredPosition = new Vector2(185, 20);
-            infoRect.sizeDelta = new Vector2(530, 270);
+            infoRect.anchoredPosition = new Vector2(248, 30);
+            infoRect.sizeDelta = new Vector2(450, 300);
 
             UIButtonJuice infoJuice = infoBoxGO.AddComponent<UIButtonJuice>();
             infoJuice.hoverScale = 1.0f; // Punches on hero switch
 
             VerticalLayoutGroup vlg = infoBoxGO.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 10f;
-            vlg.padding = new RectOffset(10, 10, 10, 10);
+            vlg.spacing = 8f;
+            vlg.padding = new RectOffset(18, 18, 16, 14);
             vlg.childControlWidth = true;
             vlg.childControlHeight = false;
 
-            txtHeroName = CreateText("TxtHeroName", infoBoxGO.transform, "HOLY KNIGHT", 24, FontStyle.Bold, new Color(1f, 0.85f, 0.35f), TextAnchor.UpperLeft, font);
-            txtHeroName.GetComponent<RectTransform>().sizeDelta = new Vector2(510, 32);
-            AddOutline(txtHeroName.gameObject, Color.black, 2f);
+            txtHeroName = CreateText("TxtHeroName", infoBoxGO.transform, "SIR ROLAND - HIỆP SĨ THÁNH", 23, FontStyle.Bold, new Color(1f, 0.88f, 0.35f), TextAnchor.UpperLeft, font);
+            txtHeroName.GetComponent<RectTransform>().sizeDelta = new Vector2(414, 30);
+            AddOutline(txtHeroName.gameObject, new Color(0.12f, 0.06f, 0.02f, 1f), 2f);
 
-            txtHeroWeapon = CreateText("TxtHeroWeapon", infoBoxGO.transform, "Vũ khí: Thánh Kiếm", 18, FontStyle.Bold, new Color(0.45f, 0.75f, 1f), TextAnchor.UpperLeft, font);
-            txtHeroWeapon.GetComponent<RectTransform>().sizeDelta = new Vector2(510, 26);
+            txtHeroWeapon = CreateText("TxtHeroWeapon", infoBoxGO.transform, "Vũ khí khởi đầu: Thánh Kiếm (Holy Broadsword)", 16, FontStyle.Bold, new Color(0.42f, 0.78f, 1f), TextAnchor.UpperLeft, font);
+            txtHeroWeapon.GetComponent<RectTransform>().sizeDelta = new Vector2(414, 24);
+            AddOutline(txtHeroWeapon.gameObject, new Color(0.04f, 0.08f, 0.16f, 1f), 1.5f);
 
-            txtHeroStats = CreateText("TxtHeroStats", infoBoxGO.transform, "❤️ Máu: 120   ⚡ Tốc độ: 5.0   ⚔️ Sát thương: +20%   🛡️ Giáp: +2", 16, FontStyle.Normal, Color.white, TextAnchor.UpperLeft, font);
-            txtHeroStats.GetComponent<RectTransform>().sizeDelta = new Vector2(510, 26);
+            txtHeroStats = CreateText("TxtHeroStats", infoBoxGO.transform, "Máu: 120       •   Tốc độ: 5.0\nSát thương: +20%   •   Giáp: +2", 15, FontStyle.Bold, new Color(0.96f, 0.94f, 0.90f), TextAnchor.UpperLeft, font);
+            txtHeroStats.GetComponent<RectTransform>().sizeDelta = new Vector2(414, 46);
+            AddOutline(txtHeroStats.gameObject, Color.black, 1.5f);
 
-            txtHeroPassive = CreateText("TxtHeroPassive", infoBoxGO.transform, "Đặc tính: Chém hình bán nguyệt càn quét quái phía trước.", 15, FontStyle.Italic, new Color(0.92f, 0.90f, 0.82f), TextAnchor.UpperLeft, font);
+            txtHeroPassive = CreateText("TxtHeroPassive", infoBoxGO.transform, "Đặc tính: Lưỡi kiếm hình bán nguyệt quét sạch quái phía trước. Tăng 20% phạm vi sát thương và khả năng chống chịu cực cao.", 15, FontStyle.Italic, new Color(0.92f, 0.88f, 0.80f), TextAnchor.UpperLeft, font);
             txtHeroPassive.horizontalOverflow = HorizontalWrapMode.Wrap;
             txtHeroPassive.verticalOverflow = VerticalWrapMode.Truncate;
-            txtHeroPassive.GetComponent<RectTransform>().sizeDelta = new Vector2(510, 80);
+            txtHeroPassive.GetComponent<RectTransform>().sizeDelta = new Vector2(414, 90);
+            AddOutline(txtHeroPassive.gameObject, new Color(0.10f, 0.06f, 0.03f, 1f), 1.2f);
 
-            // 5 Hero Slot Buttons at Bottom Left with Pop-up on Hover & Mini Portrait Icons!
-            float startX = -460f;
-            float stepX = 87f;
+            // =========================================================
+            // BOTTOM HERO NAVIGATION & 6 HERO SLOTS
+            // [ ◀ ]  [Slot 0] [Slot 1] [Slot 2] [Slot 3] [Slot 4] [Slot 5]  [ ▶ ]
+            // =========================================================
+            // Arrow Navigation Button ◀ (to the left of slot row)
+            GameObject btnPrevHero = CreateJuicyButton("Btn_PrevHero", frameGO.transform, new Vector2(-468, -210), new Vector2(38, 52), PrevHero, sprArrowLeft, 1.25f, 0.85f);
+            UIButtonJuice phj = btnPrevHero.GetComponent<UIButtonJuice>();
+            if (phj != null)
+            {
+                phj.enableHorizontalNudge = true;
+                phj.nudgeDirection = -1f;
+                phj.nudgeDistance = 4f;
+                phj.nudgeSpeed = 3.0f;
+            }
+
+            // Arrow Navigation Button ▶ (to the right of slot row)
+            GameObject btnNextHero = CreateJuicyButton("Btn_NextHero", frameGO.transform, new Vector2(-32, -210), new Vector2(38, 52), NextHero, sprArrowRight, 1.25f, 0.85f);
+            UIButtonJuice nhj = btnNextHero.GetComponent<UIButtonJuice>();
+            if (nhj != null)
+            {
+                nhj.enableHorizontalNudge = true;
+                nhj.nudgeDirection = 1f;
+                nhj.nudgeDistance = 4f;
+                nhj.nudgeSpeed = 3.0f;
+            }
+
+            // 6 Hero Slot Buttons neatly spaced at the bottom
+            float startX = -415f;
+            float stepX = 66f;
             heroSlotIndicators.Clear();
+            heroSlotButtons.Clear();
 
             for (int i = 0; i < heroes.Count; i++)
             {
                 int index = i;
                 Vector2 slotPos = new Vector2(startX + (i * stepX), -210);
 
-                GameObject btnSlot = CreateJuicyButton("Slot_" + i, frameGO.transform, slotPos, new Vector2(76, 76), () => SelectHero(index), 1.15f, 0.88f);
+                GameObject btnSlot = CreateJuicyButton("Slot_" + i, frameGO.transform, slotPos, new Vector2(60, 60), () => SelectHero(index), 1.14f, 0.88f);
+                heroSlotButtons.Add(btnSlot);
 
-                // Mini portrait icon inside slot!
+                // Carved medieval slot background tile
+                GameObject slotBg = CreateUIObject("SlotBg", btnSlot.transform);
+                RectTransform bgRect = slotBg.GetComponent<RectTransform>();
+                bgRect.anchorMin = Vector2.zero;
+                bgRect.anchorMax = Vector2.one;
+                bgRect.sizeDelta = Vector2.zero;
+                Image bgImg = slotBg.AddComponent<Image>();
+                bgImg.color = new Color(0.12f, 0.09f, 0.06f, 0.92f);
+                bgImg.raycastTarget = false;
+                AddOutline(slotBg, new Color(0.35f, 0.25f, 0.15f, 0.95f), 1.5f);
+
+                // Mini portrait icon inside slot (100% visible, sharp pixel art)
                 GameObject iconGO = CreateUIObject("Icon", btnSlot.transform);
                 RectTransform iconRect = iconGO.GetComponent<RectTransform>();
-                iconRect.anchorMin = new Vector2(0.12f, 0.12f);
-                iconRect.anchorMax = new Vector2(0.88f, 0.88f);
+                iconRect.anchorMin = new Vector2(0.08f, 0.08f);
+                iconRect.anchorMax = new Vector2(0.92f, 0.92f);
                 iconRect.offsetMin = Vector2.zero;
                 iconRect.offsetMax = Vector2.zero;
                 Image iconImg = iconGO.AddComponent<Image>();
@@ -659,25 +764,40 @@ namespace VampireSurvivors.UI
                 iconImg.preserveAspect = true;
                 iconImg.raycastTarget = false;
 
-                // Indicator outline with pulsating golden energy aura
+                // HOLLOW Glowing Golden Highlight Frame (Does NOT cover the character inside!)
                 GameObject indicator = CreateUIObject("Indicator", btnSlot.transform);
                 RectTransform indRect = indicator.GetComponent<RectTransform>();
                 indRect.anchorMin = Vector2.zero;
                 indRect.anchorMax = Vector2.one;
-                indRect.sizeDelta = Vector2.zero;
+                indRect.offsetMin = new Vector2(-4, -4);
+                indRect.offsetMax = new Vector2(4, 4);
 
-                Outline sOl = indicator.AddComponent<Outline>();
-                sOl.effectColor = new Color(1f, 0.85f, 0.2f, 1f);
-                sOl.effectDistance = new Vector2(3f, 3f);
+                Color goldColor = new Color(1f, 0.88f, 0.25f, 1f);
+                Color glowAmber = new Color(1f, 0.55f, 0.05f, 0.9f);
 
-                UIButtonJuice indJuice = indicator.AddComponent<UIButtonJuice>();
-                indJuice.enableColorPulse = true;
-                indJuice.pulseColorA = new Color(1f, 0.80f, 0.2f, 0.45f);
-                indJuice.pulseColorB = new Color(1f, 1f, 0.6f, 1.0f);
-                indJuice.pulseSpeed = 4.0f;
-                indJuice.enableBreathing = true;
-                indJuice.breathingSpeed = 3.0f;
-                indJuice.breathingAmount = 0.05f;
+                // 4 Hollow Border Bars: Top, Bottom, Left, Right
+                CreateBorderLine("BorderT", indicator.transform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 2), new Vector2(4, 3), goldColor, glowAmber);
+                CreateBorderLine("BorderB", indicator.transform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, -2), new Vector2(4, 3), goldColor, glowAmber);
+                CreateBorderLine("BorderL", indicator.transform, new Vector2(0, 0), new Vector2(0, 1), new Vector2(-2, 0), new Vector2(3, 4), goldColor, glowAmber);
+                CreateBorderLine("BorderR", indicator.transform, new Vector2(1, 0), new Vector2(1, 1), new Vector2(2, 0), new Vector2(3, 4), goldColor, glowAmber);
+
+                // 4 Golden Corner Accents
+                CreateCornerGlow("CornerTL", indicator.transform, new Vector2(0, 1), new Vector2(-2, 2), goldColor);
+                CreateCornerGlow("CornerTR", indicator.transform, new Vector2(1, 1), new Vector2(2, 2), goldColor);
+                CreateCornerGlow("CornerBL", indicator.transform, new Vector2(0, 0), new Vector2(-2, -2), goldColor);
+                CreateCornerGlow("CornerBR", indicator.transform, new Vector2(1, 0), new Vector2(2, -2), goldColor);
+
+                // Subtle warm backlight aura placed behind icon
+                GameObject backAura = CreateUIObject("BackAura", indicator.transform);
+                backAura.transform.SetAsFirstSibling();
+                RectTransform baRect = backAura.GetComponent<RectTransform>();
+                baRect.anchorMin = Vector2.zero;
+                baRect.anchorMax = Vector2.one;
+                baRect.offsetMin = Vector2.zero;
+                baRect.offsetMax = Vector2.zero;
+                Image baImg = backAura.AddComponent<Image>();
+                baImg.color = new Color(1f, 0.88f, 0.2f, 0.16f);
+                baImg.raycastTarget = false;
 
                 indicator.SetActive(i == selectedHeroIndex);
                 heroSlotIndicators.Add(indicator);
@@ -820,28 +940,30 @@ namespace VampireSurvivors.UI
 
             // Slider 1: BGM Music Volume with Value Pop Animation
             float initialMusic = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
-            sliderMusic = CreateSliderRow(panelBox.transform, "🎵 Nhạc Nền (Music):", initialMusic, (val) =>
+            sliderMusic = CreateSliderRow(panelBox.transform, "Nhạc Nền (Music):", initialMusic, (val) =>
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(val);
             }, out txtMusicValue, font, isSfx: false);
 
             // Slider 2: SFX Sound Effects Volume with Live Audio Preview
             float initialSfx = PlayerPrefs.GetFloat("SFXVolume", 1.0f);
-            sliderSfx = CreateSliderRow(panelBox.transform, "⚔️ Hiệu Ứng (SFX):", initialSfx, (val) =>
+            sliderSfx = CreateSliderRow(panelBox.transform, "Hiệu Ứng (SFX):", initialSfx, (val) =>
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.SetSfxVolume(val);
             }, out txtSfxValue, font, isSfx: true);
 
             // Toggle: Mute All with Punch Bounce
             bool initialMute = PlayerPrefs.GetInt("IsMuted", 0) == 1;
-            toggleMute = CreateToggleRow(panelBox.transform, "🔇 Tắt toàn bộ âm thanh (Mute)", initialMute, (isMuted) =>
+            toggleMute = CreateToggleRow(panelBox.transform, "Tắt Toàn Bộ Âm Thanh (Mute)", initialMute, (isMuted) =>
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.SetMute(isMuted);
             }, font);
 
             // Controls Hint with Breathing Pulse
-            Text txtControls = CreateText("TxtControls", panelBox.transform, "⌨️ ĐIỀU KHIỂN:  [WASD / Mũi tên] Di chuyển   |   [ESC] Tạm dừng   |   [Chuột] Chọn Kỹ Năng", 16, FontStyle.Normal, new Color(0.85f, 0.85f, 0.85f), TextAnchor.MiddleCenter, font);
-            txtControls.GetComponent<RectTransform>().sizeDelta = new Vector2(740, 36);
+            Text txtControls = CreateText("TxtControls", panelBox.transform, "ĐIỀU KHIỂN:  [WASD / Mũi tên] Di chuyển   |   [ESC] Tạm dừng   |   [Chuột] Chọn Kỹ Năng", 19, FontStyle.Bold, new Color(1f, 0.94f, 0.72f), TextAnchor.MiddleCenter, font);
+            txtControls.GetComponent<RectTransform>().sizeDelta = new Vector2(760, 42);
+            AddOutline(txtControls.gameObject, new Color(0.08f, 0.05f, 0.02f, 1f), 2.0f);
+
             UIButtonJuice ctrlJuice = txtControls.gameObject.AddComponent<UIButtonJuice>();
             ctrlJuice.enableBreathing = true;
             ctrlJuice.breathingSpeed = 1.8f;
@@ -860,26 +982,27 @@ namespace VampireSurvivors.UI
         {
             GameObject row = CreateUIObject("SliderRow", parent);
             RectTransform r = row.GetComponent<RectTransform>();
-            r.sizeDelta = new Vector2(700, 48);
+            r.sizeDelta = new Vector2(720, 52);
 
             HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 15f;
+            hlg.spacing = 20f;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
 
             // Hover juice on the row itself
             UIButtonJuice rowJuice = row.AddComponent<UIButtonJuice>();
-            rowJuice.hoverScale = 1.03f;
+            rowJuice.hoverScale = 1.02f;
             rowJuice.pressScale = 1.0f;
             rowJuice.playSoundOnHover = true;
 
-            Text lbl = CreateText("Lbl", row.transform, label, 18, FontStyle.Bold, Color.white, TextAnchor.MiddleLeft, font);
-            lbl.GetComponent<RectTransform>().sizeDelta = new Vector2(260, 40);
+            Text lbl = CreateText("Lbl", row.transform, label, 22, FontStyle.Bold, new Color(1f, 0.97f, 0.9f), TextAnchor.MiddleLeft, font);
+            lbl.GetComponent<RectTransform>().sizeDelta = new Vector2(270, 42);
+            AddOutline(lbl.gameObject, new Color(0.08f, 0.05f, 0.02f, 1f), 2.0f);
 
             GameObject sliderGO = CreateUIObject("Slider", row.transform);
             RectTransform sRect = sliderGO.GetComponent<RectTransform>();
-            sRect.sizeDelta = new Vector2(300, 24);
+            sRect.sizeDelta = new Vector2(300, 26);
 
             Slider slider = sliderGO.AddComponent<Slider>();
             slider.minValue = 0f;
@@ -887,7 +1010,8 @@ namespace VampireSurvivors.UI
             slider.value = initialValue;
 
             Image bg = sliderGO.AddComponent<Image>();
-            bg.color = new Color(0.2f, 0.16f, 0.1f, 0.9f);
+            bg.color = new Color(0.12f, 0.09f, 0.06f, 1f);
+            AddOutline(sliderGO, new Color(0.7f, 0.55f, 0.25f, 0.9f), 1.5f);
 
             GameObject fillArea = CreateUIObject("Fill Area", sliderGO.transform);
             RectTransform faRect = fillArea.GetComponent<RectTransform>();
@@ -899,12 +1023,14 @@ namespace VampireSurvivors.UI
             RectTransform fRect = fill.GetComponent<RectTransform>();
             fRect.sizeDelta = Vector2.zero;
             Image fillImg = fill.AddComponent<Image>();
-            fillImg.color = new Color(0.95f, 0.75f, 0.25f, 1f);
+            fillImg.color = new Color(1f, 0.82f, 0.2f, 1f);
 
             slider.fillRect = fRect;
 
-            valueText = CreateText("ValText", row.transform, Mathf.RoundToInt(initialValue * 100f) + "%", 18, FontStyle.Bold, new Color(1f, 0.9f, 0.5f), TextAnchor.MiddleRight, font);
-            valueText.GetComponent<RectTransform>().sizeDelta = new Vector2(70, 40);
+            valueText = CreateText("ValText", row.transform, Mathf.RoundToInt(initialValue * 100f) + "%", 22, FontStyle.Bold, new Color(1f, 0.88f, 0.25f), TextAnchor.MiddleRight, font);
+            valueText.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 42);
+            AddOutline(valueText.gameObject, new Color(0.08f, 0.05f, 0.02f, 1f), 2.0f);
+
             UIButtonJuice valJuice = valueText.gameObject.AddComponent<UIButtonJuice>();
 
             Text capturedValText = valueText;
@@ -932,25 +1058,26 @@ namespace VampireSurvivors.UI
         {
             GameObject row = CreateUIObject("ToggleRow", parent);
             RectTransform r = row.GetComponent<RectTransform>();
-            r.sizeDelta = new Vector2(700, 44);
+            r.sizeDelta = new Vector2(720, 48);
 
             HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 15f;
+            hlg.spacing = 20f;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
 
             UIButtonJuice rowJuice = row.AddComponent<UIButtonJuice>();
-            rowJuice.hoverScale = 1.03f;
+            rowJuice.hoverScale = 1.02f;
             rowJuice.pressScale = 1.0f;
 
             GameObject toggleGO = CreateUIObject("Toggle", row.transform);
             RectTransform tRect = toggleGO.GetComponent<RectTransform>();
-            tRect.sizeDelta = new Vector2(30, 30);
+            tRect.sizeDelta = new Vector2(34, 34);
 
             Toggle toggle = toggleGO.AddComponent<Toggle>();
             Image bg = toggleGO.AddComponent<Image>();
-            bg.color = new Color(0.25f, 0.2f, 0.15f, 0.95f);
+            bg.color = new Color(0.12f, 0.09f, 0.06f, 1f);
+            AddOutline(toggleGO, new Color(0.85f, 0.7f, 0.3f, 1f), 2.0f);
 
             UIButtonJuice toggleJuice = toggleGO.AddComponent<UIButtonJuice>();
             toggleJuice.hoverScale = 1.15f;
@@ -962,7 +1089,7 @@ namespace VampireSurvivors.UI
             cRect.anchorMax = new Vector2(0.85f, 0.85f);
             cRect.sizeDelta = Vector2.zero;
             Image checkImg = check.AddComponent<Image>();
-            checkImg.color = new Color(1f, 0.85f, 0.3f);
+            checkImg.color = new Color(1f, 0.85f, 0.2f);
 
             UIButtonJuice checkJuice = check.AddComponent<UIButtonJuice>();
 
@@ -975,8 +1102,9 @@ namespace VampireSurvivors.UI
                 if (onValueChanged != null) onValueChanged(val);
             });
 
-            Text lbl = CreateText("Lbl", row.transform, label, 18, FontStyle.Bold, Color.white, TextAnchor.MiddleLeft, font);
-            lbl.GetComponent<RectTransform>().sizeDelta = new Vector2(450, 36);
+            Text lbl = CreateText("Lbl", row.transform, label, 22, FontStyle.Bold, new Color(1f, 0.95f, 0.8f), TextAnchor.MiddleLeft, font);
+            lbl.GetComponent<RectTransform>().sizeDelta = new Vector2(460, 42);
+            AddOutline(lbl.gameObject, new Color(0.08f, 0.05f, 0.02f, 1f), 2.0f);
 
             return toggle;
         }
@@ -1016,9 +1144,9 @@ namespace VampireSurvivors.UI
             HeroData h = heroes[selectedHeroIndex];
 
             if (txtHeroName != null) txtHeroName.text = h.heroName;
-            if (txtHeroWeapon != null) txtHeroWeapon.text = "⚔️ Vũ khí khởi đầu: " + h.weaponName;
-            if (txtHeroStats != null) txtHeroStats.text = $"❤️ Máu: {h.hp}    ⚡ Tốc độ: {h.speed:F1}    ⚔️ Sát thương: +{h.mightPercent}%    🛡️ Giáp: +{h.armor}";
-            if (txtHeroPassive != null) txtHeroPassive.text = "📜 Đặc tính: " + h.passiveDescription;
+            if (txtHeroWeapon != null) txtHeroWeapon.text = "Vũ khí khởi đầu: " + h.weaponName;
+            if (txtHeroStats != null) txtHeroStats.text = $"Máu: {h.hp}       •   Tốc độ: {h.speed:F1}\nSát thương: +{h.mightPercent}%   •   Giáp: +{h.armor}";
+            if (txtHeroPassive != null) txtHeroPassive.text = "Đặc tính: " + h.passiveDescription;
 
             if (imgHeroPortrait != null && h.portraitSprite != null)
             {
@@ -1027,8 +1155,25 @@ namespace VampireSurvivors.UI
 
             for (int i = 0; i < heroSlotIndicators.Count; i++)
             {
-                heroSlotIndicators[i].SetActive(i == selectedHeroIndex);
+                bool isSelected = (i == selectedHeroIndex);
+                if (heroSlotIndicators[i] != null) heroSlotIndicators[i].SetActive(isSelected);
+                if (i < heroSlotButtons.Count && heroSlotButtons[i] != null)
+                {
+                    heroSlotButtons[i].transform.localScale = isSelected ? new Vector3(1.12f, 1.12f, 1f) : Vector3.one;
+                }
             }
+        }
+
+        public void PrevHero()
+        {
+            selectedHeroIndex = (selectedHeroIndex - 1 + heroes.Count) % heroes.Count;
+            SelectHero(selectedHeroIndex);
+        }
+
+        public void NextHero()
+        {
+            selectedHeroIndex = (selectedHeroIndex + 1) % heroes.Count;
+            SelectHero(selectedHeroIndex);
         }
 
         public void PrevMap()
@@ -1048,6 +1193,7 @@ namespace VampireSurvivors.UI
             PlayerPrefs.SetInt("SelectedMapIndex", selectedMapIndex);
             PlayerPrefs.Save();
             UpdateMapDisplay();
+            ApplySelectedMapToEnvironment();
 
             // Map preview stays perfectly stable without punch/shaking to preserve crisp pixel art
 
@@ -1203,6 +1349,24 @@ namespace VampireSurvivors.UI
         // =========================================================
         // START BATTLE
         // =========================================================
+        public void ApplySelectedMapToEnvironment()
+        {
+            if (selectedMapIndex < 0 || selectedMapIndex >= maps.Count) return;
+            Sprite mapSpr = maps[selectedMapIndex].mapPreviewSprite;
+            if (mapSpr == null) return;
+
+            GameObject bg = GameObject.Find("Environment_Background");
+            if (bg == null)
+            {
+                bg = new GameObject("Environment_Background");
+                bg.transform.position = Vector3.zero;
+            }
+
+            var env = bg.GetComponent<VampireSurvivors.Environment.MapEnvironmentManager>();
+            if (env == null) env = bg.AddComponent<VampireSurvivors.Environment.MapEnvironmentManager>();
+            env.ApplyMap(mapSpr);
+        }
+
         public void StartBattle()
         {
             Debug.Log($"<color=green>[START BATTLE]</color> Hero: {heroes[selectedHeroIndex].heroName}, Map: {maps[selectedMapIndex].mapName}");
@@ -1218,6 +1382,8 @@ namespace VampireSurvivors.UI
                 player.SwitchHero(heroes[selectedHeroIndex].heroKey);
             }
 
+            ApplySelectedMapToEnvironment();
+
             if (menuCanvas != null)
             {
                 menuCanvas.gameObject.SetActive(false);
@@ -1225,6 +1391,13 @@ namespace VampireSurvivors.UI
 
             isMenuOpen = false;
             Time.timeScale = 1f;
+
+            if (selectedMapIndex < maps.Count)
+            {
+                PlayerPrefs.SetFloat("SelectedMapGoldBonus", maps[selectedMapIndex].goldBonusValue);
+                PlayerPrefs.SetInt("SelectedMapIndex", selectedMapIndex);
+                PlayerPrefs.Save();
+            }
 
             if (GameManager.Instance != null)
             {
@@ -1266,6 +1439,46 @@ namespace VampireSurvivors.UI
             Outline ol = go.AddComponent<Outline>();
             ol.effectColor = color;
             ol.effectDistance = new Vector2(distance, -distance);
+        }
+
+        private GameObject CreateBorderLine(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 sizeDelta, Color color, Color outlineColor)
+        {
+            GameObject line = CreateUIObject(name, parent);
+            RectTransform rt = line.GetComponent<RectTransform>();
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = sizeDelta;
+
+            Image img = line.AddComponent<Image>();
+            img.color = color;
+            img.raycastTarget = false;
+
+            Outline ol = line.AddComponent<Outline>();
+            ol.effectColor = outlineColor;
+            ol.effectDistance = new Vector2(1.5f, -1.5f);
+
+            return line;
+        }
+
+        private GameObject CreateCornerGlow(string name, Transform parent, Vector2 anchor, Vector2 anchoredPos, Color color)
+        {
+            GameObject dot = CreateUIObject(name, parent);
+            RectTransform rt = dot.GetComponent<RectTransform>();
+            rt.anchorMin = anchor;
+            rt.anchorMax = anchor;
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = new Vector2(6, 6);
+
+            Image img = dot.AddComponent<Image>();
+            img.color = color;
+            img.raycastTarget = false;
+
+            Outline ol = dot.AddComponent<Outline>();
+            ol.effectColor = new Color(1f, 1f, 0.7f, 1f);
+            ol.effectDistance = new Vector2(1f, -1f);
+
+            return dot;
         }
     }
 }

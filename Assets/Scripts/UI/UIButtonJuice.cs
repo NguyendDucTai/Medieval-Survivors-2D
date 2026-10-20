@@ -181,7 +181,9 @@ namespace VampireSurvivors.UI
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (onClickAction != null)
+            // Only invoke fallback onClickAction if there is NO Button component on this GameObject
+            // (prevents double-invoking actions like PrevHero/NextHero)
+            if (onClickAction != null && GetComponent<Button>() == null)
             {
                 onClickAction.Invoke();
             }

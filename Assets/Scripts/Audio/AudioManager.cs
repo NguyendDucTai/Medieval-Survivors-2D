@@ -76,11 +76,31 @@ namespace VampireSurvivors.Audio
         private void LoadClipsIfNull()
         {
 #if UNITY_EDITOR
-            if (sfxGemPickup == null) sfxGemPickup = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_gem_pickup.wav");
-            if (sfxHit == null) sfxHit = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_hit.wav");
-            if (sfxLevelUp == null) sfxLevelUp = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_levelup.wav");
-            if (sfxPlayerDeath == null) sfxPlayerDeath = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_player_death.wav");
-            if (sfxShoot == null) sfxShoot = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_shoot.wav");
+            if (sfxGemPickup == null)
+            {
+                sfxGemPickup = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/sfx_gem_pickup.wav")
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_gem_pickup.wav");
+            }
+            if (sfxHit == null)
+            {
+                sfxHit = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/sfx_hit.wav")
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_hit.wav");
+            }
+            if (sfxLevelUp == null)
+            {
+                sfxLevelUp = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/sfx_levelup.wav")
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_levelup.wav");
+            }
+            if (sfxPlayerDeath == null)
+            {
+                sfxPlayerDeath = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/sfx_player_death.wav")
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_player_death.wav");
+            }
+            if (sfxShoot == null)
+            {
+                sfxShoot = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/sfx_shoot.wav")
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_shoot.wav");
+            }
 #endif
         }
 

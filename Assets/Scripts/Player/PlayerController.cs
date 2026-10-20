@@ -206,12 +206,9 @@ namespace VampireSurvivors.Player
                 RuntimeAnimatorController ctrl = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Animations/Characters/ShadowKnight_Controller.controller");
                 if (ctrl != null && animator != null) animator.runtimeAnimatorController = ctrl;
 
-                if (spriteRenderer != null && (spriteRenderer.sprite == null || !spriteRenderer.sprite.name.Contains("Rogue")))
-                {
-                    Sprite s = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Characters/Hero_Rogue_Idle.png")
-                        .OfType<Sprite>().FirstOrDefault();
-                    if (s != null) spriteRenderer.sprite = s;
-                }
+                Sprite s = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Characters/Hero_Rogue_Idle.png")
+                    .OfType<Sprite>().FirstOrDefault();
+                if (s != null && spriteRenderer != null) spriteRenderer.sprite = s;
 
                 GameObject slashPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_ShadowSlash.prefab");
                 if (slashPrefab != null) weapon.projectilePrefab = slashPrefab;

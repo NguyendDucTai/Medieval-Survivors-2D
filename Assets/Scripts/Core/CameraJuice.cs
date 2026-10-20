@@ -8,8 +8,8 @@ namespace VampireSurvivors.Core
         public static CameraJuice Instance;
 
         private float currentTrauma = 0f;
-        public float traumaDecay = 2.0f;
-        public float maxShakeOffset = 0.4f;
+        public float traumaDecay = 4.0f;
+        public float maxShakeOffset = 0.15f;
 
         private void Awake()
         {
