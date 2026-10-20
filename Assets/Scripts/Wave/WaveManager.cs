@@ -115,12 +115,12 @@ namespace VampireSurvivors.Wave
                 StartCoroutine(TriggerSwarm(slimePrefab, 4, null));
             }
 
-            // Second 60.0 (1:00): Wave 2 - Bat Swarm Incursion
+            // Second 60.0 (1:00): Wave 2 - Bat Swarm in Triangle Wedge Formation
             if (gameTimer >= 60f && !wave2Triggered)
             {
                 wave2Triggered = true;
-                currentWaveTitle = "🦇 ĐỢT 2: BẦY DƠI ĐỘT KÍCH";
-                StartCoroutine(TriggerSwarm(batPrefab, 18, "🦇 CẢNH BÁO: BẦY DƠI ĐỘT KÍCH!"));
+                currentWaveTitle = "🦇 ĐỢT 2: BẦY DƠI TAM GIÁC ĐỘT KÍCH";
+                StartCoroutine(TriggerTriangleSwarm(batPrefab, 5, 1.35f, "🦇 CẢNH BÁO: BẦY DƠI ĐỘT KÍCH (ĐỘI HÌNH TAM GIÁC)!"));
             }
 
             // Second 90.0 (1:30): Mini-Boss King Slime (Early Boss encounter dropping Boss Chest Roulette!)
@@ -259,6 +259,68 @@ namespace VampireSurvivors.Wave
                     }
                 }
                 yield return new WaitForSeconds(0.12f);
+            }
+        }
+
+        public IEnumerator TriggerTriangleSwarm(GameObject prefab, int rows, float spacing, string bannerMessage)
+        {
+            if (!string.IsNullOrEmpty(bannerMessage))
+            {
+                OnWaveBanner?.Invoke(bannerMessage);
+                Debug.Log($"<color=red>[TRIANGLE SWARM]</color> {bannerMessage}");
+            }
+
+            if (prefab == null) yield break;
+
+            Vector3 playerPos = playerTransform != null ? playerTransform.position : Vector3.zero;
+            // Pick a random direction from which the triangle flock emerges
+            Vector2 spawnDir = UnityEngine.Random.insideUnitCircle.normalized;
+            if (spawnDir.sqrMagnitude < 0.1f) spawnDir = Vector2.right;
+
+            float spawnDistance = spawnRadius + 3f;
+            Vector2 apexPos = (Vector2)playerPos + (spawnDir * spawnDistance);
+
+            // Forward vector is directed towards the player
+            Vector2 forward = (-spawnDir).normalized;
+            // Right vector is perpendicular to forward
+            Vector2 right = new Vector2(-forward.y, forward.x);
+
+            // Spawn rows forming a V / Triangle wedge
+            for (int r = 0; r < rows; r++)
+            {
+                int countInRow = r + 1; // Row 0 has 1 (apex), Row 1 has 2, Row 2 has 3, etc.
+                float rowDepth = r * spacing * 1.35f;
+                Vector2 rowCenter = apexPos - (forward * rowDepth);
+
+                float halfWidth = (countInRow - 1) * spacing * 0.5f;
+
+                for (int c = 0; c < countInRow; c++)
+                {
+                    float lateralOffset = -halfWidth + (c * spacing);
+                    Vector2 batPos = rowCenter + (right * lateralOffset);
+
+                    GameObject batGO = Instantiate(prefab, new Vector3(batPos.x, batPos.y, 0f), Quaternion.identity);
+                    EnemyStats stats = batGO.GetComponent<EnemyStats>();
+                    if (stats != null)
+                    {
+                        // Faster bat speed to actively chase and challenge player
+                        stats.moveSpeed = Mathf.Max(stats.moveSpeed, 4.2f);
+                        stats.maxHealth = Mathf.Max(stats.maxHealth, 35f);
+                        stats.currentHealth = stats.maxHealth;
+                    }
+                }
+
+                // Slight delay between rows so the wedge flies forward in clear formation
+                yield return new WaitForSeconds(0.08f);
+            }
+        }
+
+        public void SpawnTestTriangleBatSwarm()
+        {
+            LoadPrefabsIfNull();
+            if (batPrefab != null)
+            {
+                StartCoroutine(TriggerTriangleSwarm(batPrefab, 5, 1.35f, "🦇 THỬ NGHIỆM: ĐÀN DƠI ĐỘI HÌNH TAM GIÁC!"));
             }
         }
 

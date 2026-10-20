@@ -11,9 +11,9 @@ namespace VampireSurvivors.Enemies
     {
         [Header("Enemy Attributes")]
         public string enemyName = "Enemy";
-        public float maxHealth = 20f;
+        public float maxHealth = 45f;
         public float currentHealth;
-        public float moveSpeed = 1.5f;
+        public float moveSpeed = 2.0f;
         public float attackDamage = 10f;
         public float expValue = 10f;
         public bool isBoss = false;

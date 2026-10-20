@@ -171,10 +171,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2fbe8c4ac42ee44ba9ee9354c19cc80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Enemies.EnemyStats
-  enemyName: Enemy
-  maxHealth: 35
+  enemyName: Skeleton
+  maxHealth: 80
   currentHealth: 0
-  moveSpeed: 1.8
+  moveSpeed: 2.2
   attackDamage: 12
   expValue: 10
   isBoss: 0

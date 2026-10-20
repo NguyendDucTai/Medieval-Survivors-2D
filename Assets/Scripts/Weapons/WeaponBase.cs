@@ -42,23 +42,17 @@ namespace VampireSurvivors.Weapons
         {
             if (projectilePrefab == null) return;
 
-            Transform nearestEnemy = FindNearestEnemy();
-            Vector2 attackDir;
-
-            bool isMelee = projectilePrefab.GetComponent<MeleeSlash>() != null;
-
-            if (nearestEnemy != null)
+            // Direct Player Aiming via movement buttons (WASD / Arrows)
+            PlayerController pc = GetComponentInParent<PlayerController>();
+            Vector2 attackDir = (pc != null) ? pc.CurrentAimDirection : Vector2.right;
+            if (attackDir.sqrMagnitude < 0.001f)
             {
-                attackDir = (nearestEnemy.position - transform.position).normalized;
-            }
-            else
-            {
-                // When no enemy is detected within range, fire/slash in facing direction
                 SpriteRenderer sr = GetComponentInParent<SpriteRenderer>();
                 float facingX = (sr != null && sr.flipX) ? -1f : 1f;
                 attackDir = new Vector2(facingX, 0f);
             }
 
+            bool isMelee = projectilePrefab.GetComponent<MeleeSlash>() != null;
             Vector3 spawnPos = transform.position;
             if (isMelee)
             {

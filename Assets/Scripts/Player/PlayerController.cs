@@ -17,6 +17,15 @@ namespace VampireSurvivors.Player
         private Animator animator;
 
         private Vector2 moveInput;
+        public Vector2 lastFacingDirection = Vector2.right;
+        public Vector2 CurrentAimDirection
+        {
+            get
+            {
+                if (moveInput.sqrMagnitude > 0.01f) return moveInput;
+                return lastFacingDirection.sqrMagnitude > 0.01f ? lastFacingDirection : Vector2.right;
+            }
+        }
 
         private void Awake()
         {
@@ -119,6 +128,10 @@ namespace VampireSurvivors.Player
             }
 
             moveInput = new Vector2(moveX, moveY).normalized;
+            if (moveInput.sqrMagnitude > 0.01f)
+            {
+                lastFacingDirection = moveInput;
+            }
 
             // Flip sprite based on movement direction
             if (spriteRenderer != null && moveX != 0)

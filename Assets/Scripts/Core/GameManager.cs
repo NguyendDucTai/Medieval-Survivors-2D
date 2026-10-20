@@ -133,6 +133,16 @@ namespace VampireSurvivors.Core
                 }
             }
 
+            // Press T: Instantly trigger Triangle Bat Swarm
+            if (Input.GetKeyDown(KeyCode.T))
+            {
+                if (WaveManager.Instance != null)
+                {
+                    Debug.Log("<color=yellow>[DEV TEST]</color> Triangle Bat Swarm triggered via Key [T]!");
+                    WaveManager.Instance.SpawnTestTriangleBatSwarm();
+                }
+            }
+
             // Only run legacy spawner if WaveManager is NOT handling spawning
             if (WaveManager.Instance == null)
             {

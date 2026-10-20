@@ -171,10 +171,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2fbe8c4ac42ee44ba9ee9354c19cc80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Enemies.EnemyStats
-  enemyName: Enemy
-  maxHealth: 15
+  enemyName: Bat
+  maxHealth: 35
   currentHealth: 0
-  moveSpeed: 2.4
+  moveSpeed: 4.2
   attackDamage: 6
   expValue: 10
   isBoss: 0
