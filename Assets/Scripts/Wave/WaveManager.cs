@@ -24,17 +24,19 @@ namespace VampireSurvivors.Wave
         [Header("Wave Tuning")]
         public float spawnRadius = 11f;
         public int maxEnemiesAlive = 60;
+        public string currentWaveTitle = "⚔️ ĐỢT 1: KHỞI NGUYÊN (VƯƠNG QUỐC SLIME)";
 
         private Transform playerTransform;
         private float gameTimer = 0f;
         private float spawnTicker = 0f;
 
+        private bool wave1Triggered = false;
+        private bool wave2Triggered = false;
         private bool boss1Spawned = false;
+        private bool wave3Triggered = false;
         private bool boss2Spawned = false;
-        private bool boss3Spawned = false;
-        private bool swarm1Triggered = false;
-        private bool swarmGhostTriggered = false;
         private bool swarm2Triggered = false;
+        private bool boss3Spawned = false;
         private bool isVictory = false;
 
         public event Action<string> OnWaveBanner;
@@ -48,11 +50,15 @@ namespace VampireSurvivors.Wave
 
         private void Start()
         {
-            PlayerController p = FindObjectOfType<PlayerController>();
+#if UNITY_6000_0_OR_NEWER
+            PlayerController p = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+#else
+            PlayerController p = UnityEngine.Object.FindObjectOfType<PlayerController>();
+#endif
             if (p != null) playerTransform = p.transform;
         }
 
-        private void LoadPrefabsIfNull()
+        public void LoadPrefabsIfNull()
         {
 #if UNITY_EDITOR
             if (slimePrefab == null) slimePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Slime.prefab");
@@ -61,6 +67,8 @@ namespace VampireSurvivors.Wave
             if (goblinPrefab == null) goblinPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Goblin.prefab");
             if (ghostPrefab == null) ghostPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Ghost.prefab");
             if (bossGolemPrefab == null) bossGolemPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_BossGolem.prefab");
+            if (bossChestPrefab == null) bossChestPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BossChest.prefab");
+            if (goldCoinPrefab == null) goldCoinPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/GoldCoin.prefab");
 #endif
         }
 
@@ -70,13 +78,23 @@ namespace VampireSurvivors.Wave
             if (Core.GameManager.Instance != null && Core.GameManager.Instance.isGameOver) return;
             if (UI.MainMenuManager.Instance != null && UI.MainMenuManager.Instance.isMenuOpen) return;
 
+            if (playerTransform == null)
+            {
+#if UNITY_6000_0_OR_NEWER
+                PlayerController p = UnityEngine.Object.FindAnyObjectByType<PlayerController>();
+#else
+                PlayerController p = UnityEngine.Object.FindObjectOfType<PlayerController>();
+#endif
+                if (p != null) playerTransform = p.transform;
+            }
+
             gameTimer += Time.deltaTime;
 
             // Check for Milestones and Events
             CheckWaveEvents();
 
-            // Dynamic Spawn Rate: starts at 1.5s per spawn, ramps down to 0.4s per spawn as time progresses
-            float currentSpawnInterval = Mathf.Clamp(1.5f - (gameTimer / 450f), 0.35f, 1.5f);
+            // Dynamic Spawn Rate: starts at 1.4s per spawn, ramps down to 0.4s as game progresses
+            float currentSpawnInterval = Mathf.Clamp(1.4f - (gameTimer / 400f), 0.35f, 1.4f);
             spawnTicker += Time.deltaTime;
 
             if (spawnTicker >= currentSpawnInterval)
@@ -88,45 +106,60 @@ namespace VampireSurvivors.Wave
 
         private void CheckWaveEvents()
         {
-            // Minute 2.5: Bat Swarm
-            if (gameTimer >= 150f && !swarm1Triggered)
+            // Second 1.0: Wave 1 Announcement & Initial Slime Swarm
+            if (gameTimer >= 1.0f && !wave1Triggered)
             {
-                swarm1Triggered = true;
-                StartCoroutine(TriggerSwarm(batPrefab, 20, "CẢNH BÁO: BẦY DƠI ĐỘT KÍCH!"));
+                wave1Triggered = true;
+                currentWaveTitle = "⚔️ ĐỢT 1: KHỞI NGUYÊN (VƯƠNG QUỐC SLIME)";
+                OnWaveBanner?.Invoke("⚔️ ĐỢT 1: VƯƠNG QUỐC SLIME BẮT ĐẦU!");
+                StartCoroutine(TriggerSwarm(slimePrefab, 4, null));
             }
 
-            // Minute 3.5: Ancient Ghost Incursion
-            if (gameTimer >= 210f && !swarmGhostTriggered && ghostPrefab != null)
+            // Second 60.0 (1:00): Wave 2 - Bat Swarm Incursion
+            if (gameTimer >= 60f && !wave2Triggered)
             {
-                swarmGhostTriggered = true;
-                StartCoroutine(TriggerSwarm(ghostPrefab, 14, "CẢNH BÁO: HỒN MA CỔ XƯA XUẤT HIỆN!"));
+                wave2Triggered = true;
+                currentWaveTitle = "🦇 ĐỢT 2: BẦY DƠI ĐỘT KÍCH";
+                StartCoroutine(TriggerSwarm(batPrefab, 18, "🦇 CẢNH BÁO: BẦY DƠI ĐỘT KÍCH!"));
             }
 
-            // Minute 5.0: Mini-Boss King Slime
-            if (gameTimer >= 300f && !boss1Spawned)
+            // Second 90.0 (1:30): Mini-Boss King Slime (Early Boss encounter dropping Boss Chest Roulette!)
+            if (gameTimer >= 90f && !boss1Spawned)
             {
                 boss1Spawned = true;
-                SpawnMiniBoss(slimePrefab, "King Slime (Vua Nhầy)", 400f, 1.8f, 2.2f);
+                currentWaveTitle = "👑 TRÙM: VUA NHẦY KING SLIME";
+                SpawnMiniBoss(slimePrefab, "King Slime (Vua Nhầy)", 350f, 1.8f, 2.2f);
             }
 
-            // Minute 7.5: Goblin Rush
+            // Second 180.0 (3:00): Wave 3 - Skeleton Army
+            if (gameTimer >= 180f && !wave3Triggered)
+            {
+                wave3Triggered = true;
+                currentWaveTitle = "💀 ĐỢT 3: QUÂN ĐOÀN BỘ XƯƠNG";
+                OnWaveBanner?.Invoke("💀 ĐỢT 3: QUÂN ĐOÀN BỘ XƯƠNG TIẾN CÔNG!");
+            }
+
+            // Second 300.0 (5:00): Mini-Boss Skeleton Warlord
+            if (gameTimer >= 300f && !boss2Spawned)
+            {
+                boss2Spawned = true;
+                currentWaveTitle = "⚠️ TRÙM: ĐẠI TƯỚNG BỘ XƯƠNG";
+                SpawnMiniBoss(skeletonPrefab, "Skeleton Warlord (Đại Tướng Xương)", 850f, 2.0f, 2.0f);
+            }
+
+            // Second 450.0 (7:30): Goblin Rush
             if (gameTimer >= 450f && !swarm2Triggered)
             {
                 swarm2Triggered = true;
+                currentWaveTitle = "👺 ĐỢT 4: QUÂN ĐOÀN YÊU TINH";
                 StartCoroutine(TriggerSwarm(goblinPrefab, 16, "CẢNH BÁO: QUÂN ĐOÀN YÊU TINH TIẾN CÔNG!"));
             }
 
-            // Minute 10.0: Mini-Boss Skeleton Warlord
-            if (gameTimer >= 600f && !boss2Spawned)
-            {
-                boss2Spawned = true;
-                SpawnMiniBoss(skeletonPrefab, "Skeleton Warlord (Đại Tướng Bộ Xương)", 850f, 2.0f, 2.0f);
-            }
-
-            // Minute 15.0: World Boss Colossal Stone Golem
-            if (gameTimer >= 900f && !boss3Spawned)
+            // Second 600.0 (10:00): World Boss Colossal Stone Golem
+            if (gameTimer >= 600f && !boss3Spawned)
             {
                 boss3Spawned = true;
+                currentWaveTitle = "🗿 SIÊU TRÙM: THẠCH QUÁI GOLEM";
                 SpawnWorldBoss();
             }
 
@@ -143,21 +176,28 @@ namespace VampireSurvivors.Wave
             int currentEnemies = GameObject.FindGameObjectsWithTag("Enemy").Length;
             if (currentEnemies >= maxEnemiesAlive) return;
 
-            GameObject selectedPrefab = PickEnemyForCurrentTime();
-            if (selectedPrefab == null) return;
-
-            Vector3 spawnPos = GetRandomSpawnPosition();
-            GameObject enemyGO = Instantiate(selectedPrefab, spawnPos, Quaternion.identity);
-
-            // Scale stats by time (+4% HP per minute)
-            float minutesPassed = gameTimer / 60f;
-            EnemyStats stats = enemyGO.GetComponent<EnemyStats>();
-            if (stats != null)
+            // Group spawn: 2 to 3 enemies per burst for exciting cluster action
+            int burstCount = UnityEngine.Random.Range(2, 4);
+            for (int i = 0; i < burstCount; i++)
             {
-                stats.maxHealth *= (1f + (minutesPassed * 0.04f));
-                stats.currentHealth = stats.maxHealth;
-                stats.attackDamage *= (1f + (minutesPassed * 0.03f));
-                if (goldCoinPrefab != null) stats.goldCoinPrefab = goldCoinPrefab;
+                if (currentEnemies + i >= maxEnemiesAlive) break;
+
+                GameObject selectedPrefab = PickEnemyForCurrentTime();
+                if (selectedPrefab == null) continue;
+
+                Vector3 spawnPos = GetRandomSpawnPosition();
+                GameObject enemyGO = Instantiate(selectedPrefab, spawnPos, Quaternion.identity);
+
+                // Scale stats by time (+4% HP per minute)
+                float minutesPassed = gameTimer / 60f;
+                EnemyStats stats = enemyGO.GetComponent<EnemyStats>();
+                if (stats != null)
+                {
+                    stats.maxHealth *= (1f + (minutesPassed * 0.04f));
+                    stats.currentHealth = stats.maxHealth;
+                    stats.attackDamage *= (1f + (minutesPassed * 0.03f));
+                    if (goldCoinPrefab != null) stats.goldCoinPrefab = goldCoinPrefab;
+                }
             }
         }
 
@@ -166,26 +206,25 @@ namespace VampireSurvivors.Wave
             float minutes = gameTimer / 60f;
             float r = UnityEngine.Random.value;
 
-            if (minutes < 2f)
+            if (minutes < 1.5f)
             {
                 // Mostly slimes, occasional bat
                 return (r < 0.75f) ? slimePrefab : batPrefab;
             }
-            else if (minutes < 5f)
+            else if (minutes < 3f)
             {
-                // Bats, Skeletons, and Ghosts
+                // Bats, Skeletons, and Slimes
                 if (r < 0.35f) return slimePrefab;
-                if (r < 0.65f) return batPrefab;
-                if (r < 0.85f && ghostPrefab != null) return ghostPrefab;
+                if (r < 0.70f) return batPrefab;
                 return skeletonPrefab;
             }
-            else if (minutes < 10f)
+            else if (minutes < 6f)
             {
                 // Skeletons, Goblins, Ghosts, and Bats
-                if (r < 0.25f) return skeletonPrefab;
-                if (r < 0.50f) return goblinPrefab;
-                if (r < 0.70f && ghostPrefab != null) return ghostPrefab;
-                if (r < 0.85f) return batPrefab;
+                if (r < 0.30f) return skeletonPrefab;
+                if (r < 0.55f) return goblinPrefab;
+                if (r < 0.75f && ghostPrefab != null) return ghostPrefab;
+                if (r < 0.90f) return batPrefab;
                 return slimePrefab;
             }
             else
@@ -201,8 +240,11 @@ namespace VampireSurvivors.Wave
 
         private IEnumerator TriggerSwarm(GameObject prefab, int count, string bannerMessage)
         {
-            OnWaveBanner?.Invoke(bannerMessage);
-            Debug.Log($"<color=red>[WAVE EVENT]</color> {bannerMessage}");
+            if (!string.IsNullOrEmpty(bannerMessage))
+            {
+                OnWaveBanner?.Invoke(bannerMessage);
+                Debug.Log($"<color=red>[WAVE EVENT]</color> {bannerMessage}");
+            }
 
             for (int i = 0; i < count; i++)
             {
@@ -220,9 +262,11 @@ namespace VampireSurvivors.Wave
             }
         }
 
-        private void SpawnMiniBoss(GameObject basePrefab, string title, float hp, float speed, float scale)
+        public void SpawnMiniBoss(GameObject basePrefab, string title, float hp, float speed, float scale)
         {
+            if (basePrefab == null) basePrefab = slimePrefab;
             if (basePrefab == null) return;
+
             Vector3 pos = GetRandomSpawnPosition();
             GameObject bossGO = Instantiate(basePrefab, pos, Quaternion.identity);
             bossGO.transform.localScale = Vector3.one * scale;
@@ -242,11 +286,11 @@ namespace VampireSurvivors.Wave
             BossController bc = bossGO.AddComponent<BossController>();
             bc.bossTitle = title;
 
-            OnWaveBanner?.Invoke($"TRÙM XUẤT HIỆN: {title.ToUpper()}!");
+            OnWaveBanner?.Invoke($"👑 TRÙM XUẤT HIỆN: {title.ToUpper()}!");
             Debug.Log($"<color=orange>[BOSS SPAWNED]</color> {title} with {hp} HP!");
         }
 
-        private void SpawnWorldBoss()
+        public void SpawnWorldBoss()
         {
             GameObject prefab = bossGolemPrefab != null ? bossGolemPrefab : skeletonPrefab;
             Vector3 pos = GetRandomSpawnPosition();
@@ -268,8 +312,53 @@ namespace VampireSurvivors.Wave
             BossController bc = bossGO.AddComponent<BossController>();
             bc.bossTitle = "Colossal Stone Golem (Đại Trùm Thần Thạch)";
 
-            OnWaveBanner?.Invoke("ĐẠI TRÙM THẾ GIỚI: GOLEM KHỔNG LỒ XUẤT HIỆN!");
+            OnWaveBanner?.Invoke("🗿 ĐẠI TRÙM THẾ GIỚI: GOLEM KHỔNG LỒ XUẤT HIỆN!");
             Debug.Log("<color=red>★★ [WORLD BOSS SPAWNED] ★★</color> Colossal Stone Golem (2500 HP)!");
+        }
+
+        public void SpawnTestMiniBoss()
+        {
+            LoadPrefabsIfNull();
+            GameObject prefab = slimePrefab != null ? slimePrefab : bossGolemPrefab;
+            if (prefab != null)
+            {
+                Vector3 pos = playerTransform != null ? playerTransform.position + Vector3.right * 3.5f : Vector3.right * 3.5f;
+                GameObject bossGO = Instantiate(prefab, pos, Quaternion.identity);
+                bossGO.transform.localScale = Vector3.one * 2.2f;
+
+                EnemyStats stats = bossGO.GetComponent<EnemyStats>();
+                if (stats != null)
+                {
+                    stats.enemyName = "King Slime (Trùm Thử Nghiệm)";
+                    stats.maxHealth = 120f; // Quick to defeat in test
+                    stats.currentHealth = 120f;
+                    stats.moveSpeed = 1.8f;
+                    stats.attackDamage = 12f;
+                    stats.isBoss = true;
+                    stats.bossChestPrefab = bossChestPrefab;
+                }
+                OnWaveBanner?.Invoke("👑 TRÙM THỬ NGHIỆM: VUA NHẦY KING SLIME!");
+            }
+        }
+
+        public void SpawnTestChest()
+        {
+            LoadPrefabsIfNull();
+            Vector3 pos = playerTransform != null ? playerTransform.position + Vector3.right * 2f : Vector3.right * 2f;
+            if (bossChestPrefab != null)
+            {
+                Instantiate(bossChestPrefab, pos, Quaternion.identity);
+            }
+            else
+            {
+                GameObject chestGO = new GameObject("BossChest");
+                chestGO.transform.position = pos;
+                var col = chestGO.AddComponent<CircleCollider2D>();
+                col.isTrigger = true;
+                col.radius = 0.8f;
+                chestGO.AddComponent<Collectibles.BossChest>();
+            }
+            OnWaveBanner?.Invoke("🎁 RƯƠNG HOÀNG GIA ĐÃ XUẤT HIỆN GẦN BẠN!");
         }
 
         private void TriggerVictory()
@@ -283,7 +372,11 @@ namespace VampireSurvivors.Wave
             }
 
             // Triple gold reward for victory
-            PlayerStats player = FindObjectOfType<PlayerStats>();
+#if UNITY_6000_0_OR_NEWER
+            PlayerStats player = UnityEngine.Object.FindAnyObjectByType<PlayerStats>();
+#else
+            PlayerStats player = UnityEngine.Object.FindObjectOfType<PlayerStats>();
+#endif
             if (player != null)
             {
                 player.AddGold(500);

@@ -1,6 +1,7 @@
 using UnityEngine;
 using VampireSurvivors.Data;
 using VampireSurvivors.MetaProgression;
+using VampireSurvivors.Player;
 using VampireSurvivors.UI;
 using VampireSurvivors.Wave;
 
@@ -84,6 +85,13 @@ namespace VampireSurvivors.Core
                 GameObject menuGO = new GameObject("MainMenuManager");
                 menuGO.AddComponent<MainMenuManager>();
             }
+
+            // Ensure UIManager exists
+            if (UIManager.Instance == null && FindObjectOfType<UIManager>() == null)
+            {
+                GameObject uiGO = new GameObject("UIManager");
+                uiGO.AddComponent<UIManager>();
+            }
         }
 
         private void Update()
@@ -92,6 +100,38 @@ namespace VampireSurvivors.Core
             if (MainMenuManager.Instance != null && MainMenuManager.Instance.isMenuOpen) return;
 
             survivalTime += Time.deltaTime;
+
+            // Developer Testing Hotkeys:
+            // Press U: Instantly level up and test LevelUp cards + recipe hints
+            if (Input.GetKeyDown(KeyCode.U))
+            {
+                var stats = playerTransform != null ? playerTransform.GetComponent<PlayerStats>() : FindObjectOfType<PlayerStats>();
+                if (stats != null)
+                {
+                    Debug.Log("<color=yellow>[DEV TEST]</color> Level Up triggered via Key [U]!");
+                    stats.AddExperience(stats.expToNextLevel);
+                }
+            }
+
+            // Press B: Instantly spawn King Slime / Mini-Boss
+            if (Input.GetKeyDown(KeyCode.B))
+            {
+                if (WaveManager.Instance != null)
+                {
+                    Debug.Log("<color=yellow>[DEV TEST]</color> Mini-Boss spawned via Key [B]!");
+                    WaveManager.Instance.SpawnTestMiniBoss();
+                }
+            }
+
+            // Press C: Instantly spawn Royal Boss Chest directly at player's feet
+            if (Input.GetKeyDown(KeyCode.C))
+            {
+                if (WaveManager.Instance != null)
+                {
+                    Debug.Log("<color=yellow>[DEV TEST]</color> Royal Boss Chest spawned via Key [C]!");
+                    WaveManager.Instance.SpawnTestChest();
+                }
+            }
 
             // Only run legacy spawner if WaveManager is NOT handling spawning
             if (WaveManager.Instance == null)

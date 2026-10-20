@@ -231,6 +231,11 @@ namespace VampireSurvivors.Player
             expToNextLevel = Mathf.Round(expToNextLevel * 1.25f);
             OnLevelUp?.Invoke(currentLevel);
 
+            if (UI.LevelUpUI.Instance != null)
+            {
+                UI.LevelUpUI.Instance.OpenLevelUp();
+            }
+
             if (AchievementManager.Instance != null)
             {
                 AchievementManager.Instance.CheckProgress(AchievementType.LevelReached, currentLevel);
