@@ -60,21 +60,24 @@ namespace VampireSurvivors.Weapons
             w.level = 1;
             w.projectilePrefab = prefab;
 
-            if (name.Contains("Storm"))
+            // Normalize weapon name
+            string n = name ?? "";
+
+            if (n.Contains("Storm") || n.Contains("Aeris") || n.Equals("StormBow", StringComparison.OrdinalIgnoreCase))
             {
-                // Cung thủ 2 (Archer): Cung Thần Phong
+                // 1. Xạ thủ Aeris: Cung Thần Phong -> Astral Barrage (Mưa Tên Tinh Tú)
                 w.weaponID = "StormBow";
                 w.weaponName = "Storm Bow";
-                w.description = "Bắn mũi tên thần phong bão tố ma thuật xuyên thấu mục tiêu";
-                w.baseDamage = 25f;
-                w.baseFireRate = 1.8f;
-                w.baseRange = 11f;
+                w.description = "Bắn mũi tên thần phong bão tố ma thuật xuyên thấu kẻ địch";
+                w.baseDamage = 26f;
+                w.baseFireRate = 1.9f;
+                w.baseRange = 11.5f;
                 w.baseSpeed = 15f;
                 w.pierceCount = 2;
                 w.projectileCount = 1;
-                w.requiredPassiveID = "WindQuiver";
-                w.evolvedWeaponID = "TempestBarrage";
-                w.evolutionName = "Tempest Barrage (Bão Tố Cuồng Phong)";
+                w.requiredPassiveID = "CloverOfLuck";
+                w.evolvedWeaponID = "AstralBarrage";
+                w.evolutionName = "Astral Barrage (Mưa Tên Tinh Tú)";
 #if UNITY_EDITOR
                 if (w.projectilePrefab == null)
                 {
@@ -82,21 +85,21 @@ namespace VampireSurvivors.Weapons
                 }
 #endif
             }
-            else if (name.Contains("Bow") || name.Contains("Arrow") || name.Contains("Ranger") || name.Contains("Hunter"))
+            else if (n.Contains("Wind") || n.Contains("BasicBow") || n.Contains("Ranger") || n.Contains("Sylph") || (n.Contains("Bow") && !n.Contains("Storm")))
             {
-                // Cung thủ 1 (Ranger): Cung Săn Bắn cổ điển
+                // 2. Cung thủ Sylph: Cung Gió -> Tempest Arrow (Bão Tố Cuồng Phong)
                 w.weaponID = "BasicBow";
-                w.weaponName = "Bow & Arrow";
-                w.description = "Bắn mũi tên gỗ lông đỏ cổ điển chính xác và đẩy lùi mục tiêu";
-                w.baseDamage = 16f;
-                w.baseFireRate = 1.4f;
-                w.baseRange = 9.5f;
-                w.baseSpeed = 11f;
+                w.weaponName = "Wind Bow";
+                w.description = "Bắn mũi tên gió chính xác tầm xa và đẩy lùi mục tiêu";
+                w.baseDamage = 18f;
+                w.baseFireRate = 1.5f;
+                w.baseRange = 10f;
+                w.baseSpeed = 12f;
                 w.pierceCount = 1;
                 w.projectileCount = 1;
                 w.requiredPassiveID = "WindQuiver";
-                w.evolvedWeaponID = "StormBow";
-                w.evolutionName = "Storm Bow (Cung Thần Phong)";
+                w.evolvedWeaponID = "TempestArrow";
+                w.evolutionName = "Tempest Arrow (Bão Tố Cuồng Phong)";
 #if UNITY_EDITOR
                 if (w.projectilePrefab == null)
                 {
@@ -104,10 +107,99 @@ namespace VampireSurvivors.Weapons
                 }
 #endif
             }
-            else if (name.Contains("Sword") || name.Contains("Holy"))
+            else if (n.Contains("Sword") || n.Contains("Holy") || n.Contains("Roland") || n.Contains("Knight"))
             {
+                // 3. Hiệp sĩ Sir Roland: Thánh Kiếm -> Excalibur (Thần Kiếm Vạn Năng)
                 w.weaponID = "HolySword";
-                w.weaponName = "Holy Sword";
+                w.weaponName = "Holy Broadsword";
+                w.description = "Chém cận chiến thánh quang đẩy lùi quái vật mạnh mẽ";
+                w.baseDamage = 32f;
+                w.baseFireRate = 1.35f;
+                w.baseRange = 3.6f;
+                w.baseSpeed = 0f;
+                w.pierceCount = 999;
+                w.projectileCount = 1;
+                w.requiredPassiveID = "IronArmor";
+                w.evolvedWeaponID = "Excalibur";
+                w.evolutionName = "Excalibur (Thần Kiếm Vạn Năng)";
+#if UNITY_EDITOR
+                if (w.projectilePrefab == null)
+                {
+                    w.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_SwordSlash.prefab");
+                }
+#endif
+            }
+            else if (n.Contains("Fireball") || n.Contains("Ignis") || n.Contains("Mage"))
+            {
+                // 4. Pháp sư Ignis: Cầu Lửa -> Meteor Calamity (Hỏa Ngục Thiên Thạch)
+                w.weaponID = "Fireball";
+                w.weaponName = "Fireball";
+                w.description = "Bắn cầu lửa ma thuật thiêu đốt mục tiêu và phát nổ";
+                w.baseDamage = 28f;
+                w.baseFireRate = 1.15f;
+                w.baseRange = 9.5f;
+                w.baseSpeed = 9.5f;
+                w.pierceCount = 1;
+                w.projectileCount = 1;
+                w.requiredPassiveID = "SpellTome";
+                w.evolvedWeaponID = "MeteorCalamity";
+                w.evolutionName = "Meteor Calamity (Hỏa Ngục Thiên Thạch)";
+#if UNITY_EDITOR
+                if (w.projectilePrefab == null)
+                {
+                    w.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile_Fireball.prefab");
+                }
+#endif
+            }
+            else if (n.Contains("Staff") || n.Contains("Arcane") || n.Contains("Lightning") || n.Contains("Aurelius") || n.Contains("Archmage"))
+            {
+                // 5. Đại Pháp sư Aurelius: Gậy Thần Bão Tố -> Cosmic Singularity (Hố Đen Hư Vô)
+                w.weaponID = "ArcaneStaff";
+                w.weaponName = "Lightning Staff";
+                w.description = "Phóng quả cầu lôi điện ma pháp bí thuật cực đại";
+                w.baseDamage = 30f;
+                w.baseFireRate = 1.45f;
+                w.baseRange = 10.5f;
+                w.baseSpeed = 8.5f;
+                w.pierceCount = 3;
+                w.projectileCount = 1;
+                w.requiredPassiveID = "MagnetTalisman";
+                w.evolvedWeaponID = "CosmicSingularity";
+                w.evolutionName = "Cosmic Singularity (Hố Đen Hư Vô)";
+#if UNITY_EDITOR
+                if (w.projectilePrefab == null)
+                {
+                    w.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile_ArcaneOrb.prefab");
+                }
+#endif
+            }
+            else if (n.Contains("Dark") || n.Contains("Crescent") || n.Contains("Shadow") || n.Contains("Valen") || n.Contains("Rogue") || n.Contains("Blade"))
+            {
+                // 6. Sát thủ Valen: Lưỡi Đao Hắc Ám -> Crimson Reaper (Lưỡi Hái Huyết Nguyệt)
+                w.weaponID = "ShadowBlade";
+                w.weaponName = "Dark Crescent";
+                w.description = "Nhát chém trăng khuyết bóng tối màu tím sắc bén xuyên phá kẻ địch";
+                w.baseDamage = 45f;
+                w.baseFireRate = 1.8f;
+                w.baseRange = 4.5f;
+                w.baseSpeed = 0f;
+                w.pierceCount = 999;
+                w.projectileCount = 1;
+                w.requiredPassiveID = "BloodChalice";
+                w.evolvedWeaponID = "CrimsonReaper";
+                w.evolutionName = "Crimson Reaper (Lưỡi Hái Huyết Nguyệt)";
+#if UNITY_EDITOR
+                if (w.projectilePrefab == null)
+                {
+                    w.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_ShadowSlash.prefab");
+                }
+#endif
+            }
+            else
+            {
+                // Fallback default
+                w.weaponID = "HolySword";
+                w.weaponName = "Holy Broadsword";
                 w.description = "Chém cận chiến thánh quang đẩy lùi quái vật";
                 w.baseDamage = 30f;
                 w.baseFireRate = 1.3f;
@@ -118,65 +210,12 @@ namespace VampireSurvivors.Weapons
                 w.requiredPassiveID = "IronArmor";
                 w.evolvedWeaponID = "Excalibur";
                 w.evolutionName = "Excalibur (Thần Kiếm Vạn Năng)";
-            }
-            else if (name.Contains("Fireball"))
-            {
-                w.weaponID = "Fireball";
-                w.weaponName = "Fireball";
-                w.description = "Bắn cầu lửa ma thuật thiêu đốt mục tiêu";
-                w.baseDamage = 25f;
-                w.baseFireRate = 1.1f;
-                w.baseRange = 9f;
-                w.baseSpeed = 9f;
-                w.pierceCount = 1;
-                w.projectileCount = 1;
-                w.requiredPassiveID = "SpellTome";
-                w.evolvedWeaponID = "MeteorCalamity";
-                w.evolutionName = "Meteor Calamity (Hỏa Ngục Thiên Thạch)";
-            }
-            else if (name.Contains("Arcane") || name.Contains("Staff"))
-            {
-                w.weaponID = "ArcaneStaff";
-                w.weaponName = "Arcane Staff";
-                w.description = "Bắn quả cầu ma pháp bí thuật cực đại";
-                w.baseDamage = 28f;
-                w.baseFireRate = 1.4f;
-                w.baseRange = 10f;
-                w.baseSpeed = 8f;
-                w.pierceCount = 3;
-                w.projectileCount = 1;
-                w.requiredPassiveID = "MagicRing";
-                w.evolvedWeaponID = "CosmicSingularity";
-                w.evolutionName = "Cosmic Singularity (Hố Đen Hư Vô)";
-            }
-            else if (name.Contains("Dark") || name.Contains("Crescent") || name.Contains("Shadow") || name.Contains("Rogue") || name.Contains("Blade"))
-            {
-                w.weaponID = "ShadowBlade";
-                w.weaponName = "Dark Crescent Blade";
-                w.description = "Nhát chém lưỡi kiếm trăng khuyết bóng tối màu tím sắc bén xuyên phá kẻ địch";
-                w.baseDamage = 45f;
-                w.baseFireRate = 1.8f;
-                w.baseRange = 4.5f;
-                w.baseSpeed = 0f;
-                w.pierceCount = 999;
-                w.projectileCount = 1;
-                w.requiredPassiveID = "IronArmor";
-                w.evolvedWeaponID = "ShadowExecutioner";
-                w.evolutionName = "Shadow Executioner (Lưỡi Hái Hắc Ám)";
 #if UNITY_EDITOR
                 if (w.projectilePrefab == null)
                 {
-                    w.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_ShadowSlash.prefab");
+                    w.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_SwordSlash.prefab");
                 }
 #endif
-            }
-            else
-            {
-                w.weaponID = "HolySword";
-                w.weaponName = "Holy Sword";
-                w.requiredPassiveID = "IronArmor";
-                w.evolvedWeaponID = "Excalibur";
-                w.evolutionName = "Excalibur (Thần Kiếm Vạn Năng)";
             }
 
             return w;
@@ -271,14 +310,20 @@ namespace VampireSurvivors.Weapons
 
         private void ResolveWeaponPrefab(WeaponData weapon)
         {
+            if (weapon == null) return;
+
 #if UNITY_EDITOR
             if (weapon.weaponID == "BasicBow")
             {
                 weapon.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile_Arrow.prefab");
             }
-            else if (weapon.weaponID == "StormBow" || weapon.weaponID == "TempestBarrage")
+            else if (weapon.weaponID == "StormBow" || weapon.weaponID == "TempestArrow" || weapon.weaponID == "TempestBarrage")
             {
                 weapon.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile_StormArrow.prefab");
+            }
+            else if (weapon.weaponID == "AstralBarrage")
+            {
+                weapon.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile_AstralArrow.prefab");
             }
             else if (weapon.weaponID == "HolySword" || weapon.weaponID == "Excalibur")
             {
@@ -287,6 +332,10 @@ namespace VampireSurvivors.Weapons
             else if (weapon.weaponID == "ShadowBlade" || weapon.weaponID == "ShadowExecutioner")
             {
                 weapon.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_ShadowSlash.prefab");
+            }
+            else if (weapon.weaponID == "CrimsonReaper")
+            {
+                weapon.projectilePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/VFX_CrimsonReaper.prefab");
             }
             else if (weapon.weaponID == "Fireball" || weapon.weaponID == "MeteorCalamity")
             {
@@ -323,7 +372,17 @@ namespace VampireSurvivors.Weapons
 
         // --- Inventory Management ---
         public bool HasWeapon(string weaponID) => equippedWeapons.Exists(w => w.weaponID == weaponID);
-        public bool HasPassive(string passiveID) => equippedPassives.Exists(p => p.passiveID == passiveID);
+        public bool HasPassive(string passiveID)
+        {
+            if (string.IsNullOrEmpty(passiveID)) return false;
+            return equippedPassives.Exists(p =>
+                p.passiveID.Equals(passiveID, StringComparison.OrdinalIgnoreCase) ||
+                (passiveID.Contains("Clover") && p.passiveID.Contains("Clover")) ||
+                (passiveID.Contains("Magnet") && (p.passiveID.Contains("Magnet") || p.passiveID.Contains("Ring"))) ||
+                (passiveID.Contains("Ring") && (p.passiveID.Contains("Magnet") || p.passiveID.Contains("Ring"))) ||
+                (passiveID.Contains("Armor") && (p.passiveID.Contains("Armor") || p.passiveID.Contains("Crown")))
+            );
+        }
 
         public bool CanAddWeapon() => equippedWeapons.Count < MAX_WEAPONS;
         public bool CanAddPassive() => equippedPassives.Count < MAX_PASSIVES;
@@ -390,6 +449,10 @@ namespace VampireSurvivors.Weapons
             w.projectileCount += 2;
             w.pierceCount += 3;
 
+            // Refresh projectile prefab to match newly evolved weapon
+            w.projectilePrefab = null;
+            ResolveWeaponPrefab(w);
+
             OnWeaponEvolved?.Invoke(w);
             OnInventoryChanged?.Invoke();
 
@@ -398,8 +461,12 @@ namespace VampireSurvivors.Weapons
                 MetaProgression.AchievementManager.Instance.CheckProgress(MetaProgression.AchievementType.WeaponEvolved, 1);
             }
 
+            var cameraJuice = Camera.main != null ? Camera.main.GetComponent<Core.CameraJuice>() : null;
+            if (cameraJuice != null) cameraJuice.Shake(0.4f, 0.4f);
+
             Debug.Log($"<color=magenta>★ [WEAPON EVOLUTION COMPLETED] ★</color> {w.evolutionName} has awakened!");
             return true;
         }
     }
 }
+

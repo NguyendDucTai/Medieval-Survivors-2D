@@ -42,7 +42,7 @@ namespace VampireSurvivors.Weapons
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             timer -= Time.deltaTime;
             if (timer <= 0f)
@@ -76,7 +76,7 @@ namespace VampireSurvivors.Weapons
             HandleHit(collision);
         }
 
-        private void HandleHit(Collider2D collision)
+        protected virtual void HandleHit(Collider2D collision)
         {
             if (collision.CompareTag("Enemy"))
             {
@@ -93,8 +93,14 @@ namespace VampireSurvivors.Weapons
                     {
                         enemyRb.linearVelocity = slashDirection * knockbackForce;
                     }
+
+                    OnEnemyHit(enemy, damage);
                 }
             }
+        }
+
+        protected virtual void OnEnemyHit(EnemyStats enemy, float finalDamage)
+        {
         }
     }
 }

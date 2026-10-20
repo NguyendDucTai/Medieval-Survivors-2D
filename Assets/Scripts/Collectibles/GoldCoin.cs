@@ -64,10 +64,12 @@ namespace VampireSurvivors.Collectibles
         {
             if (playerStats != null)
             {
-                playerStats.AddGold(goldAmount);
+                float mapBonus = PlayerPrefs.GetFloat("SelectedMapGoldBonus", 1.0f);
+                int finalGold = Mathf.Max(1, Mathf.RoundToInt(goldAmount * mapBonus));
+                playerStats.AddGold(finalGold);
                 if (DamageNumberPool.Instance != null)
                 {
-                    DamageNumberPool.Instance.SpawnGold(goldAmount, transform.position);
+                    DamageNumberPool.Instance.SpawnGold(finalGold, transform.position);
                 }
             }
             Destroy(gameObject);

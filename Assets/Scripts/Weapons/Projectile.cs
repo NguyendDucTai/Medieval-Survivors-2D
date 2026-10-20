@@ -34,7 +34,7 @@ namespace VampireSurvivors.Weapons
             transform.rotation = Quaternion.Euler(0, 0, angle);
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             transform.Translate(moveDirection * speed * Time.deltaTime, Space.World);
 
@@ -45,7 +45,7 @@ namespace VampireSurvivors.Weapons
             }
         }
 
-        private void OnTriggerEnter2D(Collider2D collision)
+        protected virtual void OnTriggerEnter2D(Collider2D collision)
         {
             if (collision.CompareTag("Enemy"))
             {

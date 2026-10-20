@@ -30,6 +30,30 @@ namespace VampireSurvivors.Collectibles
         {
             isOpened = true;
 
+            // Trigger Roulette Modal Celebration
+            BossChestRouletteUI roulette = BossChestRouletteUI.Instance;
+            if (roulette == null)
+            {
+#if UNITY_6000_0_OR_NEWER
+                roulette = Object.FindAnyObjectByType<BossChestRouletteUI>();
+#else
+                roulette = Object.FindObjectOfType<BossChestRouletteUI>();
+#endif
+            }
+
+            if (roulette == null)
+            {
+                GameObject go = new GameObject("BossChestRouletteUI");
+                roulette = go.AddComponent<BossChestRouletteUI>();
+            }
+
+            if (roulette != null)
+            {
+                roulette.OpenRoulette(player, this);
+                return;
+            }
+
+            // Fallback direct rewards if UI is absent
             int goldEarned = Random.Range(minGold, maxGold + 1);
             if (player != null)
             {
