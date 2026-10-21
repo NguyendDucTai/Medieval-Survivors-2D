@@ -117,5 +117,27 @@ namespace VampireSurvivors.MetaProgression
         public float GetRegenPerSecond() => GetRank("VitalityRegen") * 0.5f;
         public int GetReviveCount() => GetRank("SecondWind");
         public int GetRerollCount() => GetRank("Reroll");
+
+        public int RefundAllUpgrades()
+        {
+            if (SaveManager.Instance.Data == null) SaveManager.Instance.Load();
+            InitializeUpgrades();
+
+            int totalRefund = 0;
+            foreach (var up in allUpgrades)
+            {
+                int currentRank = SaveManager.Instance.Data.GetUpgradeLevel(up.id);
+                for (int r = 0; r < currentRank; r++)
+                {
+                    totalRefund += up.GetCostForRank(r);
+                }
+            }
+
+            SaveManager.Instance.Data.upgradeEntries.Clear();
+            SaveManager.Instance.AddGold(totalRefund);
+            SaveManager.Instance.Save();
+            Debug.Log($"<color=yellow>[Shop Reset]</color> All upgrades reset to 0! Refunded {totalRefund:N0} gold.");
+            return totalRefund;
+        }
     }
 }

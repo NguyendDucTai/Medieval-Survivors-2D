@@ -101,6 +101,7 @@ namespace VampireSurvivors.UI
         private Sprite sprBtnClose;
         private Sprite sprArrowLeft;
         private Sprite sprArrowRight;
+        private Sprite sprBtnShop;
 
         private Dictionary<GameObject, Coroutine> runningModalAnims = new Dictionary<GameObject, Coroutine>();
 
@@ -141,6 +142,7 @@ namespace VampireSurvivors.UI
             sprBtnClose = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Close.png");
             sprArrowLeft = LoadSpriteAtPath("Assets/Sprites/UI/Arrow_Left.png");
             sprArrowRight = LoadSpriteAtPath("Assets/Sprites/UI/Arrow_Right.png");
+            sprBtnShop = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Shop.png");
         }
 
         private void Start()
@@ -154,8 +156,17 @@ namespace VampireSurvivors.UI
             // Setup in-game background terrain with the currently selected map
             ApplySelectedMapToEnvironment();
 
-            Time.timeScale = 0f;
-            isMenuOpen = true;
+            if (PlayerPrefs.GetInt("AutoStartBattle", 0) == 1)
+            {
+                PlayerPrefs.SetInt("AutoStartBattle", 0);
+                PlayerPrefs.Save();
+                StartBattle();
+            }
+            else
+            {
+                Time.timeScale = 0f;
+                isMenuOpen = true;
+            }
         }
 
         private void Update()
@@ -171,6 +182,11 @@ namespace VampireSurvivors.UI
                 {
                     StartBattle();
                 }
+            }
+
+            if (Input.GetKeyDown(KeyCode.B))
+            {
+                ShopUI.GetOrCreate().OpenShop();
             }
 
             if (Input.GetKeyDown(KeyCode.H))
@@ -540,7 +556,72 @@ namespace VampireSurvivors.UI
             CreateJuicyButton("Btn_Maps", titlePanel.transform, new Vector2(0, -380), new Vector2(400, 190), () => OpenMapSelect(true), sprBtnMaps, 1.07f, 0.93f);
             CreateJuicyButton("Btn_Options", titlePanel.transform, new Vector2(480, -380), new Vector2(400, 175), () => OpenOptions(true), sprBtnOptions, 1.07f, 0.93f);
 
-            // 2. HERO SELECT MODAL
+            // 3. Shop Button on Title Screen (Top right corner, uses custom wooden SHOP sign or royal gold plaque)
+            GameObject btnShop = CreateUIObject("Btn_ShopTitle", titlePanel.transform);
+            RectTransform shopRT = btnShop.GetComponent<RectTransform>();
+            shopRT.anchoredPosition = new Vector2(720, 440);
+
+            Image shopImg = btnShop.AddComponent<Image>();
+            if (sprBtnShop != null)
+            {
+                shopRT.sizeDelta = new Vector2(300, 92);
+                shopImg.sprite = sprBtnShop;
+                shopImg.color = Color.white;
+                shopImg.preserveAspect = true;
+            }
+            else
+            {
+                shopRT.sizeDelta = new Vector2(280, 68);
+                shopImg.color = new Color(0.12f, 0.09f, 0.16f, 0.96f);
+
+                Outline shopOutline = btnShop.AddComponent<Outline>();
+                shopOutline.effectColor = new Color(0.95f, 0.78f, 0.25f, 1f);
+                shopOutline.effectDistance = new Vector2(2.5f, -2.5f);
+
+                // Inner Bronze Inset Frame
+                GameObject innerPlaque = CreateUIObject("InnerPlaque", btnShop.transform);
+                RectTransform innerRT = innerPlaque.GetComponent<RectTransform>();
+                innerRT.anchorMin = Vector2.zero;
+                innerRT.anchorMax = Vector2.one;
+                innerRT.offsetMin = new Vector2(4f, 4f);
+                innerRT.offsetMax = new Vector2(-4f, -4f);
+
+                Image innerImg = innerPlaque.AddComponent<Image>();
+                innerImg.color = new Color(0.18f, 0.14f, 0.24f, 0.95f);
+                innerImg.raycastTarget = false;
+
+                Outline innerOutline = innerPlaque.AddComponent<Outline>();
+                innerOutline.effectColor = new Color(0.55f, 0.40f, 0.15f, 0.85f);
+                innerOutline.effectDistance = new Vector2(1.5f, -1.5f);
+
+                GameObject shopTxtGO = CreateUIObject("Text", btnShop.transform);
+                RectTransform shopTxtRT = shopTxtGO.GetComponent<RectTransform>();
+                shopTxtRT.anchorMin = Vector2.zero;
+                shopTxtRT.anchorMax = Vector2.one;
+                shopTxtRT.offsetMin = Vector2.zero;
+                shopTxtRT.offsetMax = Vector2.zero;
+
+                Text shopTxt = shopTxtGO.AddComponent<Text>();
+                shopTxt.font = defaultFont;
+                shopTxt.fontSize = 20;
+                shopTxt.fontStyle = FontStyle.Bold;
+                shopTxt.alignment = TextAnchor.MiddleCenter;
+                shopTxt.color = new Color(1f, 0.92f, 0.35f);
+                shopTxt.text = "💰 CỬA HÀNG [B]";
+
+                Outline txtOutline = shopTxtGO.AddComponent<Outline>();
+                txtOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+                txtOutline.effectDistance = new Vector2(1.5f, -1.5f);
+            }
+
+            Button shopBtn = btnShop.AddComponent<Button>();
+            shopBtn.onClick.AddListener(() => ShopUI.GetOrCreate().OpenShop());
+
+            UIButtonJuice shopJuice = btnShop.AddComponent<UIButtonJuice>();
+            shopJuice.hoverScale = 1.08f;
+            shopJuice.pressScale = 0.92f;
+
+            // 4. HERO SELECT MODAL
             BuildHeroSelectModal(canvasGO.transform, defaultFont);
 
             // 3. MAP SELECT MODAL
@@ -1364,7 +1445,7 @@ namespace VampireSurvivors.UI
 
             var env = bg.GetComponent<VampireSurvivors.Environment.MapEnvironmentManager>();
             if (env == null) env = bg.AddComponent<VampireSurvivors.Environment.MapEnvironmentManager>();
-            env.ApplyMap(mapSpr);
+            env.ApplyMapIndex(selectedMapIndex, mapSpr);
         }
 
         public void StartBattle()

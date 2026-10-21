@@ -50,7 +50,11 @@ namespace VampireSurvivors.EditorTools
             GameObject oldPlayer = GameObject.Find("Player");
             if (oldPlayer != null) Object.DestroyImmediate(oldPlayer);
 
-            foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+#if UNITY_6000_0_OR_NEWER
+            foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include))
+#else
+            foreach (var go in Object.FindObjectsOfType<GameObject>())
+#endif
             {
                 if (go.name.StartsWith("Enemy_"))
                 {

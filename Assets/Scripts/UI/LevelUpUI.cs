@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using VampireSurvivors.Player;
@@ -41,6 +42,7 @@ namespace VampireSurvivors.UI
 
         [Header("Card UI Elements (3 slots)")]
         public GameObject[] cardSlots;
+        public Image[] iconImages;
         public Text[] titleTexts;
         public Text[] descTexts;
         public Text[] badgeTexts;
@@ -156,7 +158,7 @@ namespace VampireSurvivors.UI
                         {
                             type = UpgradeOptionType.NewWeapon,
                             id = cid,
-                            title = $"Mới: {sample.weaponName}",
+                            title = sample.weaponName,
                             description = $"{sample.description}.{hint}",
                             badge = "VŨ KHÍ MỚI",
                             currentLevel = 0,
@@ -198,7 +200,7 @@ namespace VampireSurvivors.UI
                         {
                             type = UpgradeOptionType.NewPassive,
                             id = cp.passiveID,
-                            title = $"Cổ vật: {cp.passiveName}",
+                            title = cp.passiveName,
                             description = $"{cp.description}.{hint}",
                             badge = "CỔ VẬT MỚI",
                             currentLevel = 0,
@@ -276,11 +278,11 @@ namespace VampireSurvivors.UI
             bool hasPassive = inv != null && inv.HasPassive(reqPassiveID);
             if (hasPassive)
             {
-                return $"\n<color=#55FF55>✔ Đã có [{passiveDisplayName}] (Sẵn sàng Tiến Hóa: {evolvedName} khi Max!)</color>";
+                return $"\n<color=#55FF55>✔ Đã có [{passiveDisplayName}]\n➔ Sẵn sàng: {evolvedName}</color>";
             }
             else
             {
-                return $"\n<color=#FFD700>⚡ Ghép với: [{passiveDisplayName}] ➔ {evolvedName}</color>";
+                return $"\n<color=#FFD700>⚡ Ghép: [{passiveDisplayName}]\n➔ {evolvedName}</color>";
             }
         }
 
@@ -330,11 +332,11 @@ namespace VampireSurvivors.UI
             bool hasWeapon = inv != null && inv.HasWeapon(compWeaponID);
             if (hasWeapon)
             {
-                return $"\n<color=#55FF55>★ Ghép với vũ khí [{weaponDisplayName}] bạn đang trang bị ➔ {evolvedName}!</color>";
+                return $"\n<color=#55FF55>★ Sẵn sàng ghép: [{weaponDisplayName}]\n➔ {evolvedName}!</color>";
             }
             else
             {
-                return $"\n<color=#FFCC00>⚡ Cần cho Thần Binh của: [{weaponDisplayName}]</color>";
+                return $"\n<color=#FFCC00>⚡ Cần cho Thần Binh:\n[{weaponDisplayName}]</color>";
             }
         }
 
@@ -354,6 +356,128 @@ namespace VampireSurvivors.UI
             };
         }
 
+        private static readonly Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
+
+        private Sprite LoadSpriteAtPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            if (spriteCache.TryGetValue(path, out Sprite cached) && cached != null)
+                return cached;
+
+#if UNITY_EDITOR
+            Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (s != null)
+            {
+                spriteCache[path] = s;
+                return s;
+            }
+#endif
+            if (File.Exists(path))
+            {
+                try
+                {
+                    byte[] data = File.ReadAllBytes(path);
+                    Texture2D tex = new Texture2D(2, 2);
+                    if (tex.LoadImage(data))
+                    {
+                        tex.filterMode = FilterMode.Point;
+                        Sprite created = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                        spriteCache[path] = created;
+                        return created;
+                    }
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private Sprite GetOptionIcon(UpgradeOption opt)
+        {
+            if (opt == null) return null;
+
+            string path = "";
+            switch (opt.id)
+            {
+                case "HolySword":
+                    path = "Assets/Sprites/Weapons/Weapon_HolySword.png";
+                    break;
+                case "Fireball":
+                    path = "Assets/Sprites/Weapons/Weapon_Fireball.png";
+                    break;
+                case "ArcaneStaff":
+                    path = "Assets/Sprites/Weapons/Weapon_MagicStaff.png";
+                    break;
+                case "BasicBow":
+                    path = "Assets/Sprites/Weapons/Weapon_Arrow.png";
+                    break;
+                case "ShadowBlade":
+                    path = "Assets/Sprites/Weapons/VFX_ShadowSlash.png";
+                    break;
+                case "StormBow":
+                    path = "Assets/Sprites/Weapons/Weapon_StormBow.png";
+                    break;
+                case "Excalibur":
+                    path = "Assets/Sprites/Weapons/VFX_ExcaliburSlash.png";
+                    break;
+                case "Meteor":
+                    path = "Assets/Sprites/Weapons/VFX_Meteor.png";
+                    break;
+                case "Cosmic Singularity":
+                case "Singularity":
+                    path = "Assets/Sprites/Weapons/VFX_Singularity.png";
+                    break;
+                case "Tempest Arrow":
+                    path = "Assets/Sprites/Weapons/VFX_TempestArrow.png";
+                    break;
+                case "Crimson Reaper":
+                    path = "Assets/Sprites/Weapons/VFX_CrimsonReaper.png";
+                    break;
+                case "Astral Barrage":
+                    path = "Assets/Sprites/Weapons/VFX_AstralBarrage.png";
+                    break;
+                case "WindQuiver":
+                    path = "Assets/Sprites/Passives/Passive_WindQuiver.png";
+                    break;
+                case "IronArmor":
+                    path = "Assets/Sprites/Passives/Passive_IronArmor.png";
+                    break;
+                case "SpellTome":
+                    path = "Assets/Sprites/Passives/Passive_SpellTome.png";
+                    break;
+                case "MagicRing":
+                    path = "Assets/Sprites/Passives/Passive_MagicRing.png";
+                    break;
+                case "MagnetTalisman":
+                    path = "Assets/Sprites/Passives/Passive_MagnetTalisman.png";
+                    break;
+                case "BloodChalice":
+                    path = "Assets/Sprites/Passives/Passive_BloodChalice.png";
+                    break;
+                case "CloverOfLuck":
+                case "Clover":
+                    path = "Assets/Sprites/Passives/Passive_Clover.png";
+                    break;
+                case "GreedCoin":
+                    path = "Assets/Sprites/Passives/Passive_GreedCoin.png";
+                    break;
+                case "CrownOfKings":
+                case "Crown":
+                    path = "Assets/Sprites/Passives/Passive_Crown.png";
+                    break;
+                case "HolyCross":
+                    path = "Assets/Sprites/Passives/Passive_HolyCross.png";
+                    break;
+                case "GoldBonus":
+                    path = "Assets/Sprites/Passives/Passive_GreedCoin.png";
+                    break;
+                default:
+                    path = "Assets/Sprites/Passives/Passive_GreedCoin.png";
+                    break;
+            }
+
+            return LoadSpriteAtPath(path);
+        }
+
         private void DisplayOptions()
         {
             for (int i = 0; i < 3; i++)
@@ -364,6 +488,13 @@ namespace VampireSurvivors.UI
                     var opt = currentOptions[i];
                     if (cardSlots != null && i < cardSlots.Length && cardSlots[i] != null)
                         cardSlots[i].SetActive(true);
+
+                    if (iconImages != null && i < iconImages.Length && iconImages[i] != null)
+                    {
+                        Sprite iconSpr = GetOptionIcon(opt);
+                        iconImages[i].sprite = iconSpr;
+                        iconImages[i].enabled = (iconSpr != null);
+                    }
 
                     if (titleTexts != null && i < titleTexts.Length && titleTexts[i] != null)
                         titleTexts[i].text = opt.title;
@@ -547,18 +678,22 @@ namespace VampireSurvivors.UI
             cardsContainer = containerGO.transform;
 
             cardSlots = new GameObject[3];
+            iconImages = new Image[3];
             titleTexts = new Text[3];
             descTexts = new Text[3];
             badgeTexts = new Text[3];
             selectButtons = new Button[3];
 
             float cardWidth = 380f;
-            float cardHeight = 520f;
-            float spacing = 430f;
+            float cardHeight = 582f;
+            float spacing = 415f;
             float startX = -spacing;
+
+            Sprite cardFrameSprite = LoadSpriteAtPath("Assets/Sprites/UI/Frame_SkillCard.png");
 
             for (int i = 0; i < 3; i++)
             {
+                int slotIndex = i;
                 GameObject cardGO = new GameObject($"Card_Slot_{i}");
                 cardGO.transform.SetParent(containerGO.transform, false);
                 RectTransform cardRT = cardGO.AddComponent<RectTransform>();
@@ -568,102 +703,145 @@ namespace VampireSurvivors.UI
                 cardRT.anchoredPosition = new Vector2(startX + (i * spacing), 0f);
                 cardRT.sizeDelta = new Vector2(cardWidth, cardHeight);
 
+                // 1. Card Base Frame
                 Image cardBg = cardGO.AddComponent<Image>();
-                cardBg.color = new Color(0.12f, 0.12f, 0.16f, 0.96f);
+                if (cardFrameSprite != null)
+                {
+                    cardBg.sprite = cardFrameSprite;
+                    cardBg.color = Color.white;
+                    cardBg.preserveAspect = true;
+                }
+                else
+                {
+                    cardBg.color = new Color(0.10f, 0.08f, 0.14f, 0.98f);
+                    Outline cardOutline = cardGO.AddComponent<Outline>();
+                    cardOutline.effectColor = new Color(0.92f, 0.76f, 0.25f, 0.95f);
+                    cardOutline.effectDistance = new Vector2(3f, -3f);
+                }
 
-                Outline cardOutline = cardGO.AddComponent<Outline>();
-                cardOutline.effectColor = new Color(0.85f, 0.7f, 0.25f, 0.85f);
-                cardOutline.effectDistance = new Vector2(3f, -3f);
+                // Make entire card clickable for instant intuitive feel
+                Button cardBtn = cardGO.AddComponent<Button>();
+                cardBtn.onClick.AddListener(() => OnOptionSelected(slotIndex));
 
-                // Juice Hover
+                // Juice Hover & Press on Card
                 var juice = cardGO.AddComponent<UIButtonJuice>();
                 juice.hoverScale = 1.04f;
                 juice.pressScale = 0.96f;
 
-                // Badge (Tag)
+                // 2. Top Badge (Tag Plaque inside the ornate banner)
                 GameObject badgeGO = new GameObject("Badge");
                 badgeGO.transform.SetParent(cardGO.transform, false);
                 RectTransform badgeRT = badgeGO.AddComponent<RectTransform>();
                 badgeRT.anchorMin = new Vector2(0.5f, 1f);
                 badgeRT.anchorMax = new Vector2(0.5f, 1f);
                 badgeRT.pivot = new Vector2(0.5f, 1f);
-                badgeRT.anchoredPosition = new Vector2(0f, -20f);
-                badgeRT.sizeDelta = new Vector2(320f, 35f);
+                badgeRT.anchoredPosition = new Vector2(0f, -70f);
+                badgeRT.sizeDelta = new Vector2(210f, 26f);
 
-                Text bTxt = badgeGO.AddComponent<Text>();
+                GameObject badgeTxtGO = new GameObject("BadgeText");
+                badgeTxtGO.transform.SetParent(badgeGO.transform, false);
+                RectTransform bTxtRT = badgeTxtGO.AddComponent<RectTransform>();
+                bTxtRT.anchorMin = Vector2.zero;
+                bTxtRT.anchorMax = Vector2.one;
+                bTxtRT.offsetMin = Vector2.zero;
+                bTxtRT.offsetMax = Vector2.zero;
+
+                Text bTxt = badgeTxtGO.AddComponent<Text>();
                 bTxt.font = defaultFont;
-                bTxt.fontSize = 18;
+                bTxt.fontSize = 14;
                 bTxt.fontStyle = FontStyle.Bold;
                 bTxt.alignment = TextAnchor.MiddleCenter;
-                bTxt.color = new Color(1f, 0.8f, 0.2f);
+                bTxt.color = new Color(1f, 0.88f, 0.35f);
+                Outline bOutline = badgeTxtGO.AddComponent<Outline>();
+                bOutline.effectColor = new Color(0.12f, 0.08f, 0.02f, 0.95f);
+                bOutline.effectDistance = new Vector2(1f, -1f);
                 badgeTexts[i] = bTxt;
 
-                // Title
+                // 3. Upper Window: Icon Display (Animated floating weapon / relic)
+                GameObject iconGO = new GameObject("Icon");
+                iconGO.transform.SetParent(cardGO.transform, false);
+                RectTransform iconRT = iconGO.AddComponent<RectTransform>();
+                iconRT.anchorMin = new Vector2(0.5f, 0.5f);
+                iconRT.anchorMax = new Vector2(0.5f, 0.5f);
+                iconRT.pivot = new Vector2(0.5f, 0.5f);
+                iconRT.anchoredPosition = new Vector2(0f, 75f);
+                iconRT.sizeDelta = new Vector2(90f, 90f);
+
+                Image iconImg = iconGO.AddComponent<Image>();
+                iconImg.preserveAspect = true;
+                iconImages[i] = iconImg;
+
+                var iconJuice = iconGO.AddComponent<UIButtonJuice>();
+                iconJuice.enableFloating = true;
+                iconJuice.floatingDistance = 3f;
+                iconJuice.floatingSpeed = 2f;
+
+                // 4. Title (Placed neatly below icon inside upper window)
                 GameObject titleGO = new GameObject("Title");
                 titleGO.transform.SetParent(cardGO.transform, false);
                 RectTransform titleRT = titleGO.AddComponent<RectTransform>();
-                titleRT.anchorMin = new Vector2(0.5f, 1f);
-                titleRT.anchorMax = new Vector2(0.5f, 1f);
-                titleRT.pivot = new Vector2(0.5f, 1f);
-                titleRT.anchoredPosition = new Vector2(0f, -65f);
-                titleRT.sizeDelta = new Vector2(330f, 65f);
+                titleRT.anchorMin = new Vector2(0.5f, 0.5f);
+                titleRT.anchorMax = new Vector2(0.5f, 0.5f);
+                titleRT.pivot = new Vector2(0.5f, 0.5f);
+                titleRT.anchoredPosition = new Vector2(0f, -22f);
+                titleRT.sizeDelta = new Vector2(250f, 36f);
 
                 Text tTxt = titleGO.AddComponent<Text>();
                 tTxt.font = defaultFont;
-                tTxt.fontSize = 22;
+                tTxt.fontSize = 18;
                 tTxt.fontStyle = FontStyle.Bold;
                 tTxt.alignment = TextAnchor.MiddleCenter;
                 tTxt.color = Color.white;
+                Outline titleOutline = titleGO.AddComponent<Outline>();
+                titleOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+                titleOutline.effectDistance = new Vector2(1.5f, -1.5f);
                 titleTexts[i] = tTxt;
 
-                // Divider line
-                GameObject divGO = new GameObject("Divider");
-                divGO.transform.SetParent(cardGO.transform, false);
-                RectTransform divRT = divGO.AddComponent<RectTransform>();
-                divRT.anchorMin = new Vector2(0.5f, 1f);
-                divRT.anchorMax = new Vector2(0.5f, 1f);
-                divRT.pivot = new Vector2(0.5f, 1f);
-                divRT.anchoredPosition = new Vector2(0f, -140f);
-                divRT.sizeDelta = new Vector2(320f, 2f);
-                Image divImg = divGO.AddComponent<Image>();
-                divImg.color = new Color(0.4f, 0.35f, 0.25f, 0.7f);
-
-                // Description (Includes Recipe Hint)
+                // 5. Lower Window: Description & Evolution Recipe
                 GameObject descGO = new GameObject("Description");
                 descGO.transform.SetParent(cardGO.transform, false);
                 RectTransform descRT = descGO.AddComponent<RectTransform>();
                 descRT.anchorMin = new Vector2(0.5f, 0.5f);
                 descRT.anchorMax = new Vector2(0.5f, 0.5f);
                 descRT.pivot = new Vector2(0.5f, 0.5f);
-                descRT.anchoredPosition = new Vector2(0f, -15f);
-                descRT.sizeDelta = new Vector2(330f, 230f);
+                descRT.anchoredPosition = new Vector2(0f, -174f);
+                descRT.sizeDelta = new Vector2(245f, 115f);
 
                 Text dTxt = descGO.AddComponent<Text>();
                 dTxt.font = defaultFont;
-                dTxt.fontSize = 17;
-                dTxt.alignment = TextAnchor.UpperCenter;
-                dTxt.color = new Color(0.9f, 0.9f, 0.9f);
+                dTxt.fontSize = 13;
+                dTxt.lineSpacing = 1.15f;
+                dTxt.alignment = TextAnchor.MiddleCenter;
+                dTxt.color = new Color(0.96f, 0.93f, 0.86f);
                 dTxt.supportRichText = true;
+                Outline descOutline = descGO.AddComponent<Outline>();
+                descOutline.effectColor = new Color(0.08f, 0.06f, 0.04f, 0.95f);
+                descOutline.effectDistance = new Vector2(1f, -1f);
                 descTexts[i] = dTxt;
 
-                // Select Button
+                // 6. Select Button
                 GameObject btnGO = new GameObject("Btn_Select");
                 btnGO.transform.SetParent(cardGO.transform, false);
                 RectTransform btnRT = btnGO.AddComponent<RectTransform>();
                 btnRT.anchorMin = new Vector2(0.5f, 0f);
                 btnRT.anchorMax = new Vector2(0.5f, 0f);
                 btnRT.pivot = new Vector2(0.5f, 0f);
-                btnRT.anchoredPosition = new Vector2(0f, 25f);
-                btnRT.sizeDelta = new Vector2(280f, 60f);
+                btnRT.anchoredPosition = new Vector2(0f, 22f);
+                btnRT.sizeDelta = new Vector2(160f, 36f);
 
                 Image btnImg = btnGO.AddComponent<Image>();
-                btnImg.color = new Color(0.85f, 0.65f, 0.15f);
+                btnImg.color = new Color(0.82f, 0.62f, 0.18f);
+
+                Outline btnOutline = btnGO.AddComponent<Outline>();
+                btnOutline.effectColor = new Color(0.25f, 0.16f, 0.06f, 0.95f);
+                btnOutline.effectDistance = new Vector2(1.5f, -1.5f);
 
                 Button btn = btnGO.AddComponent<Button>();
                 var btnColors = btn.colors;
-                btnColors.highlightedColor = new Color(1f, 0.85f, 0.35f);
-                btnColors.pressedColor = new Color(0.7f, 0.5f, 0.1f);
+                btnColors.highlightedColor = new Color(1f, 0.88f, 0.35f);
+                btnColors.pressedColor = new Color(0.65f, 0.45f, 0.10f);
                 btn.colors = btnColors;
+                btn.onClick.AddListener(() => OnOptionSelected(slotIndex));
                 selectButtons[i] = btn;
 
                 GameObject btnTxtGO = new GameObject("Btn_Text");
@@ -676,11 +854,15 @@ namespace VampireSurvivors.UI
 
                 Text btnTxt = btnTxtGO.AddComponent<Text>();
                 btnTxt.font = defaultFont;
-                btnTxt.fontSize = 22;
+                btnTxt.fontSize = 16;
                 btnTxt.fontStyle = FontStyle.Bold;
                 btnTxt.alignment = TextAnchor.MiddleCenter;
-                btnTxt.color = new Color(0.1f, 0.08f, 0.04f);
-                btnTxt.text = "CHỌN NÂNG CẤP";
+                btnTxt.color = new Color(0.12f, 0.08f, 0.02f);
+                btnTxt.text = "CHỌN";
+
+                Outline btnTxtOutline = btnTxtGO.AddComponent<Outline>();
+                btnTxtOutline.effectColor = new Color(1f, 0.92f, 0.65f, 0.75f);
+                btnTxtOutline.effectDistance = new Vector2(0.8f, -0.8f);
 
                 cardSlots[i] = cardGO;
             }
