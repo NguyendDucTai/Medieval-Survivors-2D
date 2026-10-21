@@ -9,8 +9,29 @@ namespace VampireSurvivors.Player
         public Vector3 offset = new Vector3(0f, 0f, -10f);
         public float smoothSpeed = 8f;
 
+        [Header("Vampire Survivors Camera View")]
+        [Tooltip("Orthographic camera size. 7.5 to 8.0 matches the exact Vampire Survivors player-to-world ratio!")]
+        public float orthographicSize = 7.5f;
+
+        private Camera cam;
+
+        private void Awake()
+        {
+            cam = GetComponent<Camera>();
+            if (cam != null)
+            {
+                cam.orthographic = true;
+                cam.orthographicSize = orthographicSize;
+            }
+        }
+
         private void Start()
         {
+            if (cam != null)
+            {
+                cam.orthographic = true;
+                cam.orthographicSize = orthographicSize;
+            }
             FindTarget();
             if (target != null)
             {

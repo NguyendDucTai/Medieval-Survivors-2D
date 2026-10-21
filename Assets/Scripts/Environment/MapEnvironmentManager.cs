@@ -5,7 +5,8 @@ namespace VampireSurvivors.Environment
 {
     /// <summary>
     /// Manages the in-game background terrain, dynamically tiling/duplicating the selected map illustration
-    /// in a seamless grid around the player, creating a massive/infinite playable battlefield.
+    /// (e.g. Scorching Desert, Emerald Meadow, Castle Ruins, Infernal Volcano) in a seamless 5x5 grid
+    /// around the player, creating a massive/infinite playable battlefield.
     /// </summary>
     public class MapEnvironmentManager : MonoBehaviour
     {
@@ -21,7 +22,7 @@ namespace VampireSurvivors.Environment
         [Tooltip("Sorting layer order for background terrain tiles")]
         public int sortingOrder = -10;
 
-        private Sprite currentMapSprite;
+        public Sprite currentMapSprite;
         private List<Transform> tileTransforms = new List<Transform>();
         private float tileWidth = 27.52f;
         private float tileHeight = 15.36f;
@@ -43,10 +44,50 @@ namespace VampireSurvivors.Environment
         private void Start()
         {
             FindPlayer();
+            if (tileTransforms.Count == 0)
+            {
+                // Auto-load currently selected map from PlayerPrefs (Default: 1 = Scorching Desert)
+                int mapIdx = PlayerPrefs.GetInt("SelectedMapIndex", 1);
+                ApplyMapByIndex(mapIdx);
+            }
+        }
+
+        public void ApplyMapByIndex(int mapIndex)
+        {
+            string path = "Assets/Sprites/Maps/Map_ScorchingDesert.png";
+            if (mapIndex == 0) path = "Assets/Sprites/Maps/Map_EmeraldMeadow.png";
+            else if (mapIndex == 1) path = "Assets/Sprites/Maps/Map_ScorchingDesert.png";
+            else if (mapIndex == 2) path = "Assets/Sprites/Maps/Map_CastleRuins.png";
+            else if (mapIndex == 3) path = "Assets/Sprites/Maps/Map_InfernalVolcano.png";
+
+#if UNITY_EDITOR
+            Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (s != null)
+            {
+                ApplyMap(s);
+                return;
+            }
+#endif
+            if (currentMapSprite != null)
+            {
+                ApplyMap(currentMapSprite);
+            }
+        }
+
+        public void ApplyMapIndex(int mapIndex, Sprite fallbackPreview = null)
+        {
+            if (fallbackPreview != null)
+            {
+                ApplyMap(fallbackPreview);
+            }
+            else
+            {
+                ApplyMapByIndex(mapIndex);
+            }
         }
 
         /// <summary>
-        /// Applies the chosen map sprite and duplicates it into a massive grid of tiles.
+        /// Applies the chosen map sprite and duplicates it into a massive 5x5 grid of tiles that loops infinitely.
         /// </summary>
         public void ApplyMap(Sprite mapSprite)
         {
@@ -96,6 +137,8 @@ namespace VampireSurvivors.Environment
                     tileTransforms.Add(tileGO.transform);
                 }
             }
+
+            Debug.Log($"<color=green>[MapEnvironmentManager]</color> Applied map '{mapSprite.name}' with 5x5 infinite grid ({gridCols * tileWidth:F1}m x {gridRows * tileHeight:F1}m)!");
         }
 
         private void LateUpdate()
