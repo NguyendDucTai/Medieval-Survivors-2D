@@ -40,6 +40,44 @@ namespace VampireSurvivors.Enemies
 
         private void InitializeFrames()
         {
+#if UNITY_EDITOR
+            if (spriteSheet == null)
+            {
+                if (gameObject.name.Contains("Plant"))
+                {
+                    spriteSheet = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/Enemies/Enemy_Plant.png");
+                    columns = 4;
+                    rows = 1;
+                    maxFrames = 4;
+                    pixelsPerUnit = 120f;
+                    fps = 6f;
+                }
+            }
+
+            if (spriteSheet != null)
+            {
+                string path = UnityEditor.AssetDatabase.GetAssetPath(spriteSheet);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    UnityEngine.Object[] allAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path);
+                    List<Sprite> loadedSprites = new List<Sprite>();
+                    foreach (var obj in allAssets)
+                    {
+                        if (obj is Sprite sp) loadedSprites.Add(sp);
+                    }
+                    if (loadedSprites.Count > 0)
+                    {
+                        frames = loadedSprites.ToArray();
+                        if (spriteRenderer != null && frames.Length > 0)
+                        {
+                            spriteRenderer.sprite = frames[0];
+                        }
+                        return;
+                    }
+                }
+            }
+#endif
+
             if (spriteSheet == null) return;
 
             List<Sprite> frameList = new List<Sprite>();
