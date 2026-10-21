@@ -27,8 +27,12 @@ namespace VampireSurvivors.Player
             }
         }
 
+        public static PlayerController Instance;
+
         private void Awake()
         {
+            Instance = this;
+
             rb = GetComponent<Rigidbody2D>();
             stats = GetComponent<PlayerStats>();
             spriteRenderer = GetComponent<SpriteRenderer>();
@@ -44,6 +48,11 @@ namespace VampireSurvivors.Player
             {
                 gameObject.AddComponent<WeaponInventory>();
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void Start()
@@ -149,6 +158,18 @@ namespace VampireSurvivors.Player
         private void FixedUpdate()
         {
             rb.linearVelocity = moveInput * stats.moveSpeed;
+        }
+
+        private void OnCollisionEnter2D(Collision2D collision)
+        {
+            if (collision.gameObject.CompareTag("Enemy"))
+            {
+                Collider2D myCol = GetComponent<Collider2D>();
+                if (myCol != null && collision.collider != null)
+                {
+                    Physics2D.IgnoreCollision(myCol, collision.collider, true);
+                }
+            }
         }
 
         public void SwitchHero(string hero)

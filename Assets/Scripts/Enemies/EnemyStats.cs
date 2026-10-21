@@ -67,6 +67,13 @@ namespace VampireSurvivors.Enemies
                 ai.enabled = true;
                 ai.SetDead(false);
             }
+
+            Wave.WaveManager.RegisterEnemy(this);
+        }
+
+        private void OnDisable()
+        {
+            Wave.WaveManager.UnregisterEnemy(this);
         }
 
         public void TakeDamage(float amount, bool isCrit = false)
@@ -111,7 +118,7 @@ namespace VampireSurvivors.Enemies
             OnEnemyDeath?.Invoke();
 
             // Notify player of kill
-            PlayerStats player = FindObjectOfType<PlayerStats>();
+            PlayerStats player = PlayerStats.Instance;
             if (player != null)
             {
                 player.RecordEnemyKill(maxHealth);
@@ -147,17 +154,10 @@ namespace VampireSurvivors.Enemies
 
         private void SpawnDrops()
         {
-            // Exp Gem
+            // Exp Gem (with Vampire Survivors Gem Consolidation)
             if (expGemPrefab != null)
             {
-                if (Core.ObjectPooler.Instance != null && Core.ObjectPooler.Instance.poolDictionary.ContainsKey("ExpGem"))
-                {
-                    Core.ObjectPooler.Instance.SpawnFromPool("ExpGem", transform.position, Quaternion.identity);
-                }
-                else
-                {
-                    Instantiate(expGemPrefab, transform.position, Quaternion.identity);
-                }
+                Collectibles.ExpGem.DropExp(transform.position, expValue, expGemPrefab);
             }
 
             // Gold Coin Drop
@@ -170,7 +170,7 @@ namespace VampireSurvivors.Enemies
                 else
                 {
                     // Fallback direct coin credit if prefab not linked
-                    PlayerStats p = FindObjectOfType<PlayerStats>();
+                    PlayerStats p = PlayerStats.Instance;
                     if (p != null) p.AddGold(UnityEngine.Random.Range(3, 8));
                 }
             }

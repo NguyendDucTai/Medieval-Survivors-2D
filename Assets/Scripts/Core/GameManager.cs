@@ -143,6 +143,33 @@ namespace VampireSurvivors.Core
                 }
             }
 
+            // Press V or Y: Instantly trigger Plant Circle Trap (360° Tightening Flower Wall)
+            if (Input.GetKeyDown(KeyCode.V) || Input.GetKeyDown(KeyCode.Y))
+            {
+                if (WaveManager.Instance != null)
+                {
+                    Debug.Log("<color=green>[DEV TEST]</color> Flower Ring Trap triggered via Key [V/Y]!");
+                    WaveManager.Instance.TriggerPlantCircleTrap(52, 13.5f, "🥀 [PHÍM V TEST] VÒNG VÂY HOA QUỶ KHÉP CHẶT (360 ĐỘ)!");
+                }
+            }
+
+            // Press G: Instantly trigger Screen-Filling Continuous Skeleton Horde Swarm (60s)
+            if (Input.GetKeyDown(KeyCode.G))
+            {
+                if (WaveManager.Instance != null)
+                {
+                    Debug.Log("<color=red>[DEV TEST]</color> Continuous Skeleton Horde Swarm (60s) triggered via Key [G]!");
+                    WaveManager.Instance.TriggerContinuousHordeSwarm(60f, null, "⚠️ [TEST PHÍM G] THỦY TRIỀU BỘ XƯƠNG TRÀN VÀO (SINH TỒN 60 GIÂY)!", 240, 1.8f);
+                }
+            }
+
+            // Press K: Instantly trigger Game Over for testing
+            if (Input.GetKeyDown(KeyCode.K))
+            {
+                Debug.Log("<color=yellow>[DEV TEST]</color> Game Over triggered via Key [K]!");
+                GameOver();
+            }
+
             // Only run legacy spawner if WaveManager is NOT handling spawning
             if (WaveManager.Instance == null)
             {
@@ -192,9 +219,24 @@ namespace VampireSurvivors.Core
             isGameOver = true;
             Debug.Log("Game Over! Total Survival Time: " + survivalTime.ToString("F1") + "s");
 
-            if (RunSummaryUI.Instance != null)
+            RunSummaryUI summary = RunSummaryUI.Instance;
+            if (summary == null)
             {
-                RunSummaryUI.Instance.ShowSummary(survivalTime >= 1200f);
+#if UNITY_6000_0_OR_NEWER
+                summary = Object.FindAnyObjectByType<RunSummaryUI>();
+#else
+                summary = Object.FindObjectOfType<RunSummaryUI>();
+#endif
+                if (summary == null)
+                {
+                    GameObject go = new GameObject("RunSummaryUI");
+                    summary = go.AddComponent<RunSummaryUI>();
+                }
+            }
+
+            if (summary != null)
+            {
+                summary.ShowSummary(survivalTime >= 1200f);
             }
         }
     }

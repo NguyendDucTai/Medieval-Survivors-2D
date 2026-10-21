@@ -50,9 +50,17 @@ namespace VampireSurvivors.Player
         public float damageCooldown = 0.25f; // Brief invulnerability window (i-frame)
         private float lastShakeTime = -10f;
 
+        public static PlayerStats Instance;
+
         private void Awake()
         {
+            Instance = this;
             spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void Start()
