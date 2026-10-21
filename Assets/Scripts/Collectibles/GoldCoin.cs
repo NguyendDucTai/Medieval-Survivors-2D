@@ -27,7 +27,18 @@ namespace VampireSurvivors.Collectibles
 
         private void FindPlayer()
         {
+            if (PlayerController.Instance != null)
+            {
+                playerTransform = PlayerController.Instance.transform;
+                playerStats = PlayerStats.Instance != null ? PlayerStats.Instance : PlayerController.Instance.GetComponent<PlayerStats>();
+                return;
+            }
+
+#if UNITY_6000_0_OR_NEWER
+            PlayerController player = FindAnyObjectByType<PlayerController>();
+#else
             PlayerController player = FindObjectOfType<PlayerController>();
+#endif
             if (player != null)
             {
                 playerTransform = player.transform;

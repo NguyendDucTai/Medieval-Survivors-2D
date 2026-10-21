@@ -88,12 +88,6 @@ namespace VampireSurvivors.Weapons
                     hitEnemies.Add(enemy);
                     enemy.TakeDamage(damage, isCrit);
 
-                    Rigidbody2D enemyRb = enemy.GetComponent<Rigidbody2D>();
-                    if (enemyRb != null)
-                    {
-                        enemyRb.linearVelocity = slashDirection * knockbackForce;
-                    }
-
                     OnEnemyHit(enemy, damage);
                 }
             }

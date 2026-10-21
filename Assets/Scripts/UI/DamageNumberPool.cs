@@ -73,6 +73,17 @@ namespace VampireSurvivors.UI
             item.Show(text, position, color, 1.0f);
         }
 
+        public void SpawnExp(float expAmount, Vector3 position, bool isRedGem = false)
+        {
+            FloatingDamageText item = GetAvailable();
+            if (item == null) return;
+
+            string text = isRedGem ? $"+{Mathf.RoundToInt(expAmount)} EXP (NGỌC ĐỎ)!" : $"+{Mathf.RoundToInt(expAmount)} EXP";
+            Color color = isRedGem ? new Color(1f, 0.25f, 0.35f) : new Color(0.3f, 0.85f, 1f);
+            float scale = isRedGem ? 1.6f : 1.0f;
+            item.Show(text, position, color, scale);
+        }
+
         private FloatingDamageText GetAvailable()
         {
             for (int i = 0; i < pool.Count; i++)
