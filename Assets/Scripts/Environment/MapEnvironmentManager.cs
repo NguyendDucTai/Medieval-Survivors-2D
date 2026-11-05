@@ -23,6 +23,7 @@ namespace VampireSurvivors.Environment
         public int sortingOrder = -10;
 
         public Sprite currentMapSprite;
+        public int currentMapIndex = 1;
         private List<Transform> tileTransforms = new List<Transform>();
         private float tileWidth = 27.52f;
         private float tileHeight = 15.36f;
@@ -54,31 +55,68 @@ namespace VampireSurvivors.Environment
 
         public void ApplyMapByIndex(int mapIndex)
         {
+            currentMapIndex = mapIndex;
+            EnsureHazardManager(mapIndex);
             string path = "Assets/Sprites/Maps/Map_ScorchingDesert.png";
-            if (mapIndex == 0) path = "Assets/Sprites/Maps/Map_EmeraldMeadow.png";
+            if (mapIndex == 0) path = "Assets/Sprites/Maps/Map_EmeraldMeadow_Ground.png";
             else if (mapIndex == 1) path = "Assets/Sprites/Maps/Map_ScorchingDesert.png";
-            else if (mapIndex == 2) path = "Assets/Sprites/Maps/Map_CastleRuins.png";
+            else if (mapIndex == 2) path = "Assets/Sprites/Maps/Map_CastleRuins_Ground.png";
             else if (mapIndex == 3) path = "Assets/Sprites/Maps/Map_InfernalVolcano.png";
 
 #if UNITY_EDITOR
             Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (s == null && mapIndex == 0)
+            {
+                s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Maps/Map_EmeraldMeadow.png");
+            }
+            else if (s == null && mapIndex == 2)
+            {
+                s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Maps/Map_CastleRuins.png");
+            }
             if (s != null)
             {
-                ApplyMap(s);
+                ApplyMap(s, mapIndex);
                 return;
             }
 #endif
+            if (System.IO.File.Exists(path))
+            {
+                try
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(path);
+                    Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    if (tex.LoadImage(bytes))
+                    {
+                        tex.filterMode = (mapIndex == 0 || mapIndex == 2) ? FilterMode.Bilinear : FilterMode.Point;
+                        float ppu = (mapIndex == 0) ? 50f : (mapIndex == 2 ? 60f : 16f);
+                        Sprite loadedSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), ppu);
+                        ApplyMap(loadedSprite, mapIndex);
+                        return;
+                    }
+                }
+                catch { }
+            }
+
             if (currentMapSprite != null)
             {
-                ApplyMap(currentMapSprite);
+                ApplyMap(currentMapSprite, mapIndex);
             }
         }
 
         public void ApplyMapIndex(int mapIndex, Sprite fallbackPreview = null)
         {
+            currentMapIndex = mapIndex;
+            EnsureHazardManager(mapIndex);
+            if (mapIndex == 0 || mapIndex == 2)
+            {
+                // Prioritize the clean modular ground plate for Meadow & Castle Ruins so props can be spawned separately
+                ApplyMapByIndex(mapIndex);
+                return;
+            }
+
             if (fallbackPreview != null)
             {
-                ApplyMap(fallbackPreview);
+                ApplyMap(fallbackPreview, mapIndex);
             }
             else
             {
@@ -89,10 +127,18 @@ namespace VampireSurvivors.Environment
         /// <summary>
         /// Applies the chosen map sprite and duplicates it into a massive 5x5 grid of tiles that loops infinitely.
         /// </summary>
-        public void ApplyMap(Sprite mapSprite)
+        public void ApplyMap(Sprite mapSprite, int mapIndex = -1)
         {
             if (mapSprite == null) return;
             currentMapSprite = mapSprite;
+            if (mapIndex >= 0)
+            {
+                currentMapIndex = mapIndex;
+            }
+            else if (mapSprite.name.Contains("EmeraldMeadow"))
+            {
+                currentMapIndex = 0;
+            }
 
             // Turn off parent SpriteRenderer so only child duplicated tiles are rendered
             SpriteRenderer parentSR = GetComponent<SpriteRenderer>();
@@ -134,11 +180,24 @@ namespace VampireSurvivors.Environment
                     sr.drawMode = SpriteDrawMode.Simple;
                     sr.color = Color.white;
 
+                    // If Emerald Meadow or Castle Ruins, populate modular interactive props (trees, ruins, walls, rocks)
+                    if (currentMapIndex == 0)
+                    {
+                        MeadowPropManager.PopulateTileProps(tileGO, c, r);
+                    }
+                    else if (currentMapIndex == 2)
+                    {
+                        CastlePropManager.PopulateTileProps(tileGO, c, r);
+                    }
+
                     tileTransforms.Add(tileGO.transform);
                 }
             }
 
-            Debug.Log($"<color=green>[MapEnvironmentManager]</color> Applied map '{mapSprite.name}' with 5x5 infinite grid ({gridCols * tileWidth:F1}m x {gridRows * tileHeight:F1}m)!");
+            Debug.Log($"<color=green>[MapEnvironmentManager]</color> Applied map '{mapSprite.name}' (MapIndex: {currentMapIndex}) with 5x5 infinite grid ({gridCols * tileWidth:F1}m x {gridRows * tileHeight:F1}m)!");
+
+            // Synchronize colors of all existing monsters in the scene to match the newly applied map
+            Enemies.EnemyStats.RefreshAllEnemyColors();
         }
 
         private void LateUpdate()
@@ -204,6 +263,16 @@ namespace VampireSurvivors.Environment
                 var pc = FindAnyObjectByType<Player.PlayerController>();
                 if (pc != null) playerTransform = pc.transform;
             }
+        }
+
+        private void EnsureHazardManager(int mapIndex)
+        {
+            currentMapIndex = mapIndex;
+            var hm = Hazards.MapHazardManager.Instance;
+            if (hm == null) hm = FindAnyObjectByType<Hazards.MapHazardManager>();
+            if (hm == null) hm = GetComponent<Hazards.MapHazardManager>();
+            if (hm == null) hm = gameObject.AddComponent<Hazards.MapHazardManager>();
+            hm.ConfigureForMap(mapIndex);
         }
     }
 }
