@@ -124,6 +124,11 @@ namespace VampireSurvivors.Enemies
 
                 CheckPlayerContactDamage();
 
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.sortingOrder = 1000 - (int)((transform.position.y - 0.20f) * 16f);
+            }
+
                 if (chargeTimer >= maxChargeLifetime)
                 {
                     Destroy(gameObject);
@@ -146,6 +151,11 @@ namespace VampireSurvivors.Enemies
             }
 
             CheckPlayerContactDamage();
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.sortingOrder = 1000 - (int)((transform.position.y - 0.20f) * 16f);
+            }
         }
 
         private void CheckPlayerContactDamage()

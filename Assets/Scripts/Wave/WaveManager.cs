@@ -50,6 +50,7 @@ namespace VampireSurvivors.Wave
         public event Action OnVictory;
 
         private static readonly HashSet<EnemyStats> activeEnemySet = new HashSet<EnemyStats>();
+        public static IReadOnlyCollection<EnemyStats> ActiveEnemies => activeEnemySet;
         public static int ActiveEnemyCount => activeEnemySet.Count;
 
         public static void RegisterEnemy(EnemyStats enemy)
@@ -92,6 +93,29 @@ namespace VampireSurvivors.Wave
             if (goldCoinPrefab == null) goldCoinPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/GoldCoin.prefab");
             if (plantPrefab == null) plantPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Plant.prefab");
 #endif
+        }
+
+        public void ResetWaveState()
+        {
+            gameTimer = 0f;
+            spawnTicker = 0f;
+            wave1Triggered = false;
+            wave2Triggered = false;
+            boss1Spawned = false;
+            wave3Triggered = false;
+            plantTrapTriggered = false;
+            boss2Spawned = false;
+            marchingHordeTriggered = false;
+            swarm2Triggered = false;
+            boss3Spawned = false;
+            marchingHorde2Triggered = false;
+            wave5Triggered = false;
+            boss4Spawned = false;
+            wave6Triggered = false;
+            isVictory = false;
+            currentWaveTitle = "⚔️ ĐỢT 1: KHỞI NGUYÊN (VƯƠNG QUỐC SLIME)";
+            activeEnemySet.Clear();
+            StopAllCoroutines();
         }
 
         private void Update()
@@ -150,7 +174,7 @@ namespace VampireSurvivors.Wave
             {
                 boss1Spawned = true;
                 currentWaveTitle = "👑 TRÙM: VUA NHẦY KING SLIME";
-                SpawnMiniBoss(slimePrefab, "King Slime (Vua Nhầy)", 350f, 1.8f, 2.2f);
+                SpawnMiniBoss(slimePrefab, "King Slime (Vua Nhầy)", 1400f, 2.5f, 2.3f);
             }
 
             // Second 180.0 (3:00): Wave 3 - Skeleton Army
@@ -174,7 +198,7 @@ namespace VampireSurvivors.Wave
             {
                 boss2Spawned = true;
                 currentWaveTitle = "⚠️ TRÙM: ĐẠI TƯỚNG BỘ XƯƠNG";
-                SpawnMiniBoss(skeletonPrefab, "Skeleton Warlord (Đại Tướng Xương)", 850f, 2.0f, 2.0f);
+                SpawnMiniBoss(skeletonPrefab, "Skeleton Warlord (Đại Tướng Xương)", 3800f, 2.8f, 2.2f);
             }
 
             // Second 330.0 (5:30): Screen-Wide Continuous Skeleton Horde Wave 1 (Lasts 60 seconds / 1 full minute!)
@@ -214,7 +238,7 @@ namespace VampireSurvivors.Wave
             {
                 marchingHorde2Triggered = true;
                 currentWaveTitle = "👺 ĐỢT 5.5: THỦY TRIỀU YÊU TINH CUỒNG NỘ (SINH TỒN 75 GIÂY)";
-                TriggerContinuousHordeSwarm(75f, goblinPrefab, "🔥 BÁO ĐỘNG TỐI CAO: THỦY TRIỀU YÊU TINH TRÀN VÀO (SINH TỒN 75 GIÂY)!", 260, 2.0f);
+                TriggerContinuousHordeSwarm(75f, goblinPrefab, "🔥 BÁO ĐỘNG TỐI CAO: THỦY TRIỀU YÊU TINH TRÀN VÀO (SINH TỒN 75 GIÂY)!", 260, 3.4f);
             }
 
             // Second 900.0 (15:00): Twin Titans Boss Encounter (King Slime + Skeleton Warlord)
@@ -222,8 +246,8 @@ namespace VampireSurvivors.Wave
             {
                 boss4Spawned = true;
                 currentWaveTitle = "👑 SONG TRÙM: BỘ ĐÔI TINH ANH";
-                SpawnMiniBoss(slimePrefab, "Ancient King Slime", 650f, 1.9f, 2.4f);
-                SpawnMiniBoss(skeletonPrefab, "Undead Warlord", 1200f, 2.1f, 2.2f);
+                SpawnMiniBoss(slimePrefab, "Ancient King Slime (Đại Vương Nhầy Cổ Đại)", 6000f, 2.8f, 2.5f);
+                SpawnMiniBoss(skeletonPrefab, "Undead Warlord (Hắc Tướng Bất Tử)", 7500f, 3.0f, 2.3f);
             }
 
             // Second 1080.0 (18:00): Wave 6 - Final Goblin & Ghost Horde Rush (24 fast enemies)
@@ -468,10 +492,10 @@ namespace VampireSurvivors.Wave
             if (stats != null)
             {
                 stats.enemyName = "Colossal Stone Golem";
-                stats.maxHealth = 2500f;
-                stats.currentHealth = 2500f;
-                stats.moveSpeed = 1.6f;
-                stats.attackDamage = 40f;
+                stats.maxHealth = 8500f;
+                stats.currentHealth = 8500f;
+                stats.moveSpeed = 2.4f;
+                stats.attackDamage = 50f;
                 stats.isBoss = true;
                 stats.bossChestPrefab = bossChestPrefab;
             }
@@ -480,7 +504,7 @@ namespace VampireSurvivors.Wave
             bc.bossTitle = "Colossal Stone Golem (Đại Trùm Thần Thạch)";
 
             OnWaveBanner?.Invoke("🗿 ĐẠI TRÙM THẾ GIỚI: GOLEM KHỔNG LỒ XUẤT HIỆN!");
-            Debug.Log("<color=red>★★ [WORLD BOSS SPAWNED] ★★</color> Colossal Stone Golem (2500 HP)!");
+            Debug.Log("<color=red>★★ [WORLD BOSS SPAWNED] ★★</color> Colossal Stone Golem (8500 HP)!");
         }
 
         public void SpawnTestMiniBoss()
@@ -497,10 +521,10 @@ namespace VampireSurvivors.Wave
                 if (stats != null)
                 {
                     stats.enemyName = "King Slime (Trùm Thử Nghiệm)";
-                    stats.maxHealth = 120f; // Quick to defeat in test
-                    stats.currentHealth = 120f;
-                    stats.moveSpeed = 1.8f;
-                    stats.attackDamage = 12f;
+                    stats.maxHealth = 1200f;
+                    stats.currentHealth = 1200f;
+                    stats.moveSpeed = 2.4f;
+                    stats.attackDamage = 20f;
                     stats.isBoss = true;
                     stats.bossChestPrefab = bossChestPrefab;
                 }
@@ -665,25 +689,63 @@ namespace VampireSurvivors.Wave
             float timer = 0f;
             float spawnTick = 0.12f;
             float nextCleanupTime = 1.0f;
-            bool halfWayNotified = false;
+            bool phase2Notified = false;
+            bool phase3Notified = false;
+            int hordeSpawnCounter = 0;
 
             while (timer < duration)
             {
                 if (playerTransform == null) yield break;
 
                 timer += spawnTick;
+                float progress = timer / duration;
 
-                // Midpoint alert for extra tension
-                if (!halfWayNotified && timer >= (duration * 0.5f))
+                // 3-Phase Progression: as the wave continues, speed and damage ramp up
+                float currentSpeed = moveSpeed;
+                float currentDamage = 12f;
+                bool isGoblin = (customPrefab == goblinPrefab);
+                Color hordeColor = isGoblin ? new Color(1f, 0.65f, 0.65f) : new Color(0.72f, 0.88f, 1f);
+
+                if (progress >= 0.67f)
                 {
-                    halfWayNotified = true;
-                    OnWaveBanner?.Invoke($"⏱️ THỦY TRIỀU HẮC ÁM: CÒN {Mathf.CeilToInt(duration - timer)} GIÂY! HÃY TỰ TÌM KẼ HỞ ĐỂ THOÁT THÂN!");
+                    // Phase 3: Final 33% (Death Surge)
+                    currentSpeed = Mathf.Max(moveSpeed, 2.65f);
+                    currentDamage = 18f;
+                    spawnTick = 0.085f;
+                    hordeColor = isGoblin ? new Color(1f, 0.35f, 0.35f) : new Color(0.95f, 0.70f, 0.90f);
+
+                    if (!phase3Notified)
+                    {
+                        phase3Notified = true;
+                        OnWaveBanner?.Invoke($"🔥 CAO TRÀO TỬ THẦN: CÒN {Mathf.CeilToInt(duration - timer)} GIÂY! TOÀN BỘ ĐỘI HÌNH HÓA CUỒNG!");
+                    }
+                }
+                else if (progress >= 0.33f)
+                {
+                    // Phase 2: Middle 33% (Frenzy Surge)
+                    currentSpeed = Mathf.Max(moveSpeed, 2.3f);
+                    currentDamage = 15f;
+                    spawnTick = 0.10f;
+                    hordeColor = isGoblin ? new Color(1f, 0.5f, 0.5f) : new Color(0.80f, 0.85f, 1f);
+
+                    if (!phase2Notified)
+                    {
+                        phase2Notified = true;
+                        OnWaveBanner?.Invoke($"⚡ BÁO ĐỘNG ĐỎ: THỦY TRIỀU BẮT ĐẦU CUỒNG NỘ (CÒN {Mathf.CeilToInt(duration - timer)} GIÂY)!");
+                    }
+                }
+                else
+                {
+                    // Phase 1: First 33% (Standard Surge)
+                    currentSpeed = Mathf.Max(moveSpeed, 2.0f);
+                    currentDamage = 12f;
+                    spawnTick = 0.12f;
                 }
 
                 Vector3 playerPos = playerTransform.position;
 
                 // 1. Vampire Survivors Wrap-Around Teleport Recycling:
-                // Instead of destroying and reinstantiating distant enemies, teleport them directly to the player's front advancing perimeter!
+                // Instead of destroying distant enemies, teleport them directly in front of the player's advance direction!
                 if (timer >= nextCleanupTime)
                 {
                     nextCleanupTime = timer + 0.8f;
@@ -705,12 +767,18 @@ namespace VampireSurvivors.Wave
 
                                 es.transform.position = new Vector3(teleX, teleY, 0f);
                                 es.currentHealth = es.maxHealth;
+                                es.moveSpeed = currentSpeed;
                             }
                         }
                     }
                 }
 
-                // 2. Continuous swarm spawning to keep screen densely populated ("kín map")
+                // 2. Dynamic Health based on player's level so good skills don't instantly trivialize the horde
+                int playerLvl = PlayerStats.Instance != null ? PlayerStats.Instance.currentLevel : 1;
+                float baseHordeHealth = isGoblin ? 220f : 160f;
+                float dynamicHealth = baseHordeHealth + (playerLvl * 14f);
+
+                // 3. Continuous swarm spawning to keep screen densely populated ("kín map")
                 int needed = maxCapacity - ActiveEnemyCount;
 
                 if (needed > 0)
@@ -723,6 +791,9 @@ namespace VampireSurvivors.Wave
 
                     for (int b = 0; b < burst; b++)
                     {
+                        hordeSpawnCounter++;
+                        bool isElite = (hordeSpawnCounter % 12 == 0);
+
                         float angleOffset = UnityEngine.Random.Range(-35f, 35f);
                         float angleRad = (baseAngle + angleOffset) * Mathf.Deg2Rad;
 
@@ -735,16 +806,34 @@ namespace VampireSurvivors.Wave
                         GameObject enemyGO = Instantiate(prefabToUse, spawnPos, Quaternion.identity);
 
                         EnemyStats stats = enemyGO.GetComponent<EnemyStats>();
+                        var sr = enemyGO.GetComponent<SpriteRenderer>();
+
                         if (stats != null)
                         {
-                            bool isGoblin = (customPrefab == goblinPrefab);
-                            stats.enemyName = isGoblin ? "Horde Goblin (Yêu Tinh Thủy Triều)" : "Horde Skeleton (Bộ Xương Thủy Triều)";
-                            stats.maxHealth = isGoblin ? 40f : 32f;
-                            stats.currentHealth = stats.maxHealth;
-                            stats.moveSpeed = moveSpeed;
-                            stats.attackDamage = 8f;
-                            stats.expValue = 12f;
-                            stats.goldDropChance = 0.25f;
+                            if (isElite)
+                            {
+                                stats.enemyName = isGoblin ? "Goblin Berserker (Cuồng Chiến Yêu Tinh)" : "Skeleton Captain (Đội Trưởng Xương Thiết Giáp)";
+                                stats.maxHealth = dynamicHealth * 3.5f; // ~850 - 1300+ HP! Heavy meat shield
+                                stats.currentHealth = stats.maxHealth;
+                                stats.moveSpeed = currentSpeed * 0.92f;
+                                stats.attackDamage = currentDamage * 1.5f;
+                                stats.expValue = 45f;
+                                stats.goldDropChance = 1.0f; // Guaranteed Gold Drop
+                                enemyGO.transform.localScale = Vector3.one * 1.45f;
+                                if (sr != null) sr.color = new Color(1f, 0.35f, 0.35f); // Blood Red heavy armor
+                            }
+                            else
+                            {
+                                stats.enemyName = isGoblin ? "Horde Goblin (Yêu Tinh Thủy Triều)" : "Horde Skeleton (Bộ Xương Thủy Triều)";
+                                stats.maxHealth = dynamicHealth; // ~230 - 370+ HP!
+                                stats.currentHealth = stats.maxHealth;
+                                stats.moveSpeed = currentSpeed;
+                                stats.attackDamage = currentDamage;
+                                stats.expValue = 12f;
+                                stats.goldDropChance = 0.25f;
+                                if (sr != null) sr.color = hordeColor;
+                            }
+
                             if (goldCoinPrefab != null) stats.goldCoinPrefab = goldCoinPrefab;
                         }
 
@@ -753,13 +842,6 @@ namespace VampireSurvivors.Wave
                         if (ai != null)
                         {
                             ai.isChargeFlyThrough = false;
-                        }
-
-                        // Visual styling: light icy cyan tone for skeletons (matching screenshot) or enraged red for goblins
-                        var sr = enemyGO.GetComponent<SpriteRenderer>();
-                        if (sr != null)
-                        {
-                            sr.color = (customPrefab == goblinPrefab) ? new Color(1f, 0.65f, 0.65f) : new Color(0.72f, 0.88f, 1f);
                         }
                     }
                 }
