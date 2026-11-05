@@ -18,6 +18,7 @@ namespace VampireSurvivors.Player
 
         private Vector2 moveInput;
         public Vector2 lastFacingDirection = Vector2.right;
+        [HideInInspector] public Vector2 externalVelocity = Vector2.zero;
         public Vector2 CurrentAimDirection
         {
             get
@@ -42,6 +43,7 @@ namespace VampireSurvivors.Player
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
             // Ensure WeaponInventory is attached
             if (GetComponent<WeaponInventory>() == null)
@@ -59,6 +61,18 @@ namespace VampireSurvivors.Player
         {
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
             if (animator == null) animator = GetComponent<Animator>();
+
+            int savedHeroIdx = PlayerPrefs.GetInt("SelectedHeroIndex", -1);
+            string[] heroIndexMap = { "Knight", "ShadowKnight", "Mage", "Archmage", "Ranger", "Archer" };
+            if (savedHeroIdx >= 0 && savedHeroIdx < heroIndexMap.Length)
+            {
+                string targetHero = heroIndexMap[savedHeroIdx];
+                if (VampireSurvivors.Data.SaveManager.Instance == null || VampireSurvivors.Data.SaveManager.Instance.IsHeroUnlocked(targetHero))
+                {
+                    SwitchHero(targetHero);
+                    return;
+                }
+            }
 
             WeaponBase weapon = GetComponent<WeaponBase>();
             string sName = (spriteRenderer != null && spriteRenderer.sprite != null) ? spriteRenderer.sprite.name : "";
@@ -92,7 +106,7 @@ namespace VampireSurvivors.Player
             }
             else
             {
-                SwitchHero(sName.Contains("Rogue") ? "ShadowKnight" : (sName.Contains("Ranger") ? "Ranger" : "Archer"));
+                SwitchHero("Knight");
             }
         }
 
@@ -109,13 +123,13 @@ namespace VampireSurvivors.Player
                 if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) moveX -= 1f;
                 if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) moveX += 1f;
 
-                // Hotkeys to switch heroes during testing: 1=Knight, 2=ShadowKnight, 3=Mage, 4=Archmage, 5=Ranger, 6=Archer
-                if (Keyboard.current.digit1Key.wasPressedThisFrame) SwitchHero("Knight");
-                if (Keyboard.current.digit2Key.wasPressedThisFrame) SwitchHero("ShadowKnight");
-                if (Keyboard.current.digit3Key.wasPressedThisFrame) SwitchHero("Mage");
-                if (Keyboard.current.digit4Key.wasPressedThisFrame) SwitchHero("Archmage");
-                if (Keyboard.current.digit5Key.wasPressedThisFrame) SwitchHero("Ranger");
-                if (Keyboard.current.digit6Key.wasPressedThisFrame) SwitchHero("Archer");
+                // Hotkeys to switch heroes: only allowed if hero is unlocked
+                if (Keyboard.current.digit1Key.wasPressedThisFrame) TrySwitchHero("Knight");
+                if (Keyboard.current.digit2Key.wasPressedThisFrame) TrySwitchHero("ShadowKnight");
+                if (Keyboard.current.digit3Key.wasPressedThisFrame) TrySwitchHero("Mage");
+                if (Keyboard.current.digit4Key.wasPressedThisFrame) TrySwitchHero("Archmage");
+                if (Keyboard.current.digit5Key.wasPressedThisFrame) TrySwitchHero("Ranger");
+                if (Keyboard.current.digit6Key.wasPressedThisFrame) TrySwitchHero("Archer");
             }
 #endif
 
@@ -126,12 +140,12 @@ namespace VampireSurvivors.Player
                     moveX = Input.GetAxisRaw("Horizontal");
                     moveY = Input.GetAxisRaw("Vertical");
 
-                    if (Input.GetKeyDown(KeyCode.Alpha1)) SwitchHero("Knight");
-                    if (Input.GetKeyDown(KeyCode.Alpha2)) SwitchHero("ShadowKnight");
-                    if (Input.GetKeyDown(KeyCode.Alpha3)) SwitchHero("Mage");
-                    if (Input.GetKeyDown(KeyCode.Alpha4)) SwitchHero("Archmage");
-                    if (Input.GetKeyDown(KeyCode.Alpha5)) SwitchHero("Ranger");
-                    if (Input.GetKeyDown(KeyCode.Alpha6)) SwitchHero("Archer");
+                    if (Input.GetKeyDown(KeyCode.Alpha1)) TrySwitchHero("Knight");
+                    if (Input.GetKeyDown(KeyCode.Alpha2)) TrySwitchHero("ShadowKnight");
+                    if (Input.GetKeyDown(KeyCode.Alpha3)) TrySwitchHero("Mage");
+                    if (Input.GetKeyDown(KeyCode.Alpha4)) TrySwitchHero("Archmage");
+                    if (Input.GetKeyDown(KeyCode.Alpha5)) TrySwitchHero("Ranger");
+                    if (Input.GetKeyDown(KeyCode.Alpha6)) TrySwitchHero("Archer");
                 }
                 catch { }
             }
@@ -148,6 +162,12 @@ namespace VampireSurvivors.Player
                 spriteRenderer.flipX = moveX < 0;
             }
 
+            // Dynamic Y-Sorting for authentic 2.5D top-down layering
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.sortingOrder = 1000 - (int)((transform.position.y - 0.25f) * 16f);
+            }
+
             // Update Animator parameters if present
             if (animator != null)
             {
@@ -157,7 +177,7 @@ namespace VampireSurvivors.Player
 
         private void FixedUpdate()
         {
-            rb.linearVelocity = moveInput * stats.moveSpeed;
+            rb.linearVelocity = moveInput * stats.moveSpeed + externalVelocity;
         }
 
         private void OnCollisionEnter2D(Collision2D collision)
@@ -172,6 +192,16 @@ namespace VampireSurvivors.Player
             }
         }
 
+        public void TrySwitchHero(string hero)
+        {
+            if (VampireSurvivors.Data.SaveManager.Instance != null && !VampireSurvivors.Data.SaveManager.Instance.IsHeroUnlocked(hero))
+            {
+                Debug.LogWarning($"<color=orange>[Hero Unlock]</color> Anh hùng '{hero}' đang bị khóa! Hãy hoàn thành thử thách để mở khóa.");
+                return;
+            }
+            SwitchHero(hero);
+        }
+
         public void SwitchHero(string hero)
         {
             WeaponBase weapon = GetComponent<WeaponBase>();
@@ -179,6 +209,7 @@ namespace VampireSurvivors.Player
 
             if (animator == null) animator = GetComponent<Animator>();
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            if (stats == null) stats = GetComponent<PlayerStats>();
 
             if (hero == "Knight")
             {
@@ -196,6 +227,7 @@ namespace VampireSurvivors.Player
                 weapon.weaponName = "Holy Sword";
                 weapon.fireRate = 1.3f;
                 weapon.attackRange = 3.5f;
+                if (stats != null) stats.ConfigureHeroBaseStats(120f, 5.0f, 20f, 2f);
                 Debug.Log("<color=cyan>[Hero Switched]</color> Knight with Holy Sword (Melee Slash)!");
             }
             else if (hero == "Mage")
@@ -214,6 +246,7 @@ namespace VampireSurvivors.Player
                 weapon.weaponName = "Fireball";
                 weapon.fireRate = 1.1f;
                 weapon.attackRange = 9.0f;
+                if (stats != null) stats.ConfigureHeroBaseStats(80f, 4.8f, 40f, 0f);
                 Debug.Log("<color=magenta>[Hero Switched]</color> Mage with Fireball (Magic Missile)!");
             }
             else if (hero == "Ranger")
@@ -232,6 +265,7 @@ namespace VampireSurvivors.Player
                 weapon.weaponName = "Bow & Arrow";
                 weapon.fireRate = 1.6f;
                 weapon.attackRange = 10.0f;
+                if (stats != null) stats.ConfigureHeroBaseStats(95f, 5.6f, 25f, 1f);
                 Debug.Log("<color=green>[Hero Switched]</color> Ranger with Bow & Arrow (Piercing Arrow)!");
             }
             else if (hero == "ShadowKnight" || hero == "Rogue")
@@ -250,6 +284,7 @@ namespace VampireSurvivors.Player
                 weapon.weaponName = "Dark Crescent Blade";
                 weapon.fireRate = 1.8f;
                 weapon.attackRange = 4.5f;
+                if (stats != null) stats.ConfigureHeroBaseStats(90f, 6.2f, 30f, 0f);
                 Debug.Log("<color=purple>[Hero Switched]</color> Shadow Knight with Dark Crescent Blade (Upgraded Slash)!");
             }
             else if (hero == "Archmage" || hero == "PhapSu" || hero == "GrandMage")
@@ -279,6 +314,7 @@ namespace VampireSurvivors.Player
                 weapon.weaponName = "Arcane Staff";
                 weapon.fireRate = 1.4f;
                 weapon.attackRange = 10.0f;
+                if (stats != null) stats.ConfigureHeroBaseStats(85f, 5.0f, 50f, 1f);
                 Debug.Log("<color=cyan>[Hero Switched]</color> Archmage with Arcane Staff (Piercing Arcane Orb)!");
             }
             else if (hero == "Archer" || hero == "Hunter" || hero == "Marksman" || hero == "CungThu")
@@ -308,6 +344,7 @@ namespace VampireSurvivors.Player
                 weapon.weaponName = "Storm Bow";
                 weapon.fireRate = 1.6f;
                 weapon.attackRange = 11.0f;
+                if (stats != null) stats.ConfigureHeroBaseStats(90f, 5.8f, 35f, 1f);
                 Debug.Log("<color=green>[Hero Switched]</color> Archer with Storm Bow (Rapid Piercing Storm Arrow)!");
             }
 

@@ -18,6 +18,7 @@ namespace VampireSurvivors.Weapons
         private float timer;
         private Vector2 slashDirection = Vector2.right;
         private HashSet<EnemyStats> hitEnemies = new HashSet<EnemyStats>();
+        private HashSet<Environment.Hazards.IBreakable> hitBreakables = new HashSet<Environment.Hazards.IBreakable>();
         private SpriteRenderer spriteRenderer;
 
         public void Setup(Vector2 direction, float damageMultiplier = 1f, bool criticalHit = false)
@@ -33,6 +34,7 @@ namespace VampireSurvivors.Weapons
 
             timer = duration;
             hitEnemies.Clear();
+            hitBreakables.Clear();
 
             // VFX_Slash crest points up (+Y in sprite space). Offset by -90 degrees so crest faces attackDir.
             float angle = Mathf.Atan2(slashDirection.y, slashDirection.x) * Mathf.Rad2Deg - 90f;
@@ -78,6 +80,12 @@ namespace VampireSurvivors.Weapons
 
         protected virtual void HandleHit(Collider2D collision)
         {
+            var breakable = collision.GetComponent<Environment.Hazards.IBreakable>();
+            if (breakable != null && !breakable.IsDestroyed && !hitBreakables.Contains(breakable))
+            {
+                hitBreakables.Add(breakable);
+                breakable.TakeBreakableDamage(damage);
+            }
             if (collision.CompareTag("Enemy"))
             {
                 EnemyStats enemy = collision.GetComponent<EnemyStats>();

@@ -90,7 +90,7 @@ namespace VampireSurvivors.Weapons
                 // 2. Cung thủ Sylph: Cung Gió -> Tempest Arrow (Bão Tố Cuồng Phong)
                 w.weaponID = "BasicBow";
                 w.weaponName = "Wind Bow";
-                w.description = "Bắn mũi tên gió chính xác tầm xa và đẩy lùi mục tiêu";
+                w.description = "Bắn mũi tên gió chính xác tầm xa xuyên thấu mục tiêu";
                 w.baseDamage = 18f;
                 w.baseFireRate = 1.5f;
                 w.baseRange = 10f;
@@ -112,7 +112,7 @@ namespace VampireSurvivors.Weapons
                 // 3. Hiệp sĩ Sir Roland: Thánh Kiếm -> Excalibur (Thần Kiếm Vạn Năng)
                 w.weaponID = "HolySword";
                 w.weaponName = "Holy Broadsword";
-                w.description = "Chém cận chiến thánh quang đẩy lùi quái vật mạnh mẽ";
+                w.description = "Chém cận chiến thánh quang quét sạch bầy quái vật";
                 w.baseDamage = 32f;
                 w.baseFireRate = 1.35f;
                 w.baseRange = 3.6f;
@@ -134,7 +134,7 @@ namespace VampireSurvivors.Weapons
                 // 4. Pháp sư Ignis: Cầu Lửa -> Meteor Calamity (Hỏa Ngục Thiên Thạch)
                 w.weaponID = "Fireball";
                 w.weaponName = "Fireball";
-                w.description = "Bắn cầu lửa ma thuật thiêu đốt mục tiêu và phát nổ";
+                w.description = "Bắn cầu lửa ma thuật tự tìm mục tiêu và phát nổ";
                 w.baseDamage = 28f;
                 w.baseFireRate = 1.15f;
                 w.baseRange = 9.5f;
@@ -200,7 +200,7 @@ namespace VampireSurvivors.Weapons
                 // Fallback default
                 w.weaponID = "HolySword";
                 w.weaponName = "Holy Broadsword";
-                w.description = "Chém cận chiến thánh quang đẩy lùi quái vật";
+                w.description = "Chém cận chiến thánh quang quét sạch bầy quái vật";
                 w.baseDamage = 30f;
                 w.baseFireRate = 1.3f;
                 w.baseRange = 3.5f;
@@ -254,16 +254,30 @@ namespace VampireSurvivors.Weapons
                 if (weapon.projectilePrefab == null) return;
             }
 
-            // Direct Player Aiming via movement buttons (WASD / Arrows)
+            bool isMelee = weapon.projectilePrefab.GetComponent<MeleeSlash>() != null;
+
+            // Melee weapons slash in player's facing/movement direction;
+            // Ranged weapons auto-aim at the nearest enemy in range (fallback to facing direction)
             PlayerController pc = GetComponent<PlayerController>();
             Vector2 baseDir = (pc != null) ? pc.CurrentAimDirection : Vector2.right;
+            if (!isMelee)
+            {
+                Transform nearestTarget = FindNearestEnemy(weapon.baseRange);
+                if (nearestTarget != null)
+                {
+                    Vector2 toTarget = (Vector2)(nearestTarget.position - transform.position);
+                    if (toTarget.sqrMagnitude > 0.001f)
+                    {
+                        baseDir = toTarget.normalized;
+                    }
+                }
+            }
+
             if (baseDir.sqrMagnitude < 0.001f)
             {
                 float facingX = (spriteRenderer != null && spriteRenderer.flipX) ? -1f : 1f;
                 baseDir = new Vector2(facingX, 0f);
             }
-
-            bool isMelee = weapon.projectilePrefab.GetComponent<MeleeSlash>() != null;
 
             int count = weapon.GetProjectileCount();
             float spreadAngle = count > 1 ? 25f : 0f;
@@ -350,16 +364,34 @@ namespace VampireSurvivors.Weapons
 
         private Transform FindNearestEnemy(float range)
         {
-            GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
             Transform nearest = null;
-            float minDist = range;
+            float minDistSqr = range * range;
+            Vector3 myPos = transform.position;
 
+            var activeSet = Wave.WaveManager.ActiveEnemies;
+            if (activeSet != null && activeSet.Count > 0)
+            {
+                foreach (var e in activeSet)
+                {
+                    if (e == null || e.currentHealth <= 0 || !e.gameObject.activeInHierarchy) continue;
+
+                    float dSqr = (e.transform.position - myPos).sqrMagnitude;
+                    if (dSqr < minDistSqr)
+                    {
+                        minDistSqr = dSqr;
+                        nearest = e.transform;
+                    }
+                }
+                return nearest;
+            }
+
+            GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
             foreach (var e in enemies)
             {
-                float d = Vector2.Distance(transform.position, e.transform.position);
-                if (d < minDist)
+                float dSqr = (e.transform.position - myPos).sqrMagnitude;
+                if (dSqr < minDistSqr)
                 {
-                    minDist = d;
+                    minDistSqr = dSqr;
                     nearest = e.transform;
                 }
             }
@@ -452,9 +484,17 @@ namespace VampireSurvivors.Weapons
             OnWeaponEvolved?.Invoke(w);
             OnInventoryChanged?.Invoke();
 
+            if (Data.SaveManager.Instance != null)
+            {
+                Data.SaveManager.Instance.RecordEvolutionDiscovered(w.weaponID);
+            }
+
             if (MetaProgression.AchievementManager.Instance != null)
             {
-                MetaProgression.AchievementManager.Instance.CheckProgress(MetaProgression.AchievementType.WeaponEvolved, 1);
+                int evoCount = (Data.SaveManager.Instance != null && Data.SaveManager.Instance.Data != null && Data.SaveManager.Instance.Data.discoveredEvolutions != null)
+                    ? Mathf.Max(1, Data.SaveManager.Instance.Data.discoveredEvolutions.Count)
+                    : 1;
+                MetaProgression.AchievementManager.Instance.CheckProgress(MetaProgression.AchievementType.WeaponEvolved, evoCount);
             }
 
             var cameraJuice = Camera.main != null ? Camera.main.GetComponent<Core.CameraJuice>() : null;
@@ -465,4 +505,3 @@ namespace VampireSurvivors.Weapons
         }
     }
 }
-

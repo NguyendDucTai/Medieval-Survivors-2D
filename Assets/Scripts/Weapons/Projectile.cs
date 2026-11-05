@@ -18,6 +18,7 @@ namespace VampireSurvivors.Weapons
         private int currentPierce;
         private float timer;
         private HashSet<EnemyStats> hitEnemies = new HashSet<EnemyStats>();
+        private HashSet<Environment.Hazards.IBreakable> hitBreakables = new HashSet<Environment.Hazards.IBreakable>();
 
         public void Setup(Vector2 direction, float damageMultiplier = 1f, bool criticalHit = false)
         {
@@ -29,6 +30,7 @@ namespace VampireSurvivors.Weapons
             currentPierce = pierceCount;
             timer = lifeTime;
             hitEnemies.Clear();
+            hitBreakables.Clear();
 
             float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0, 0, angle);
@@ -47,6 +49,19 @@ namespace VampireSurvivors.Weapons
 
         protected virtual void OnTriggerEnter2D(Collider2D collision)
         {
+            var breakable = collision.GetComponent<Environment.Hazards.IBreakable>();
+            if (breakable != null && !breakable.IsDestroyed && !hitBreakables.Contains(breakable))
+            {
+                hitBreakables.Add(breakable);
+                breakable.TakeBreakableDamage(damage);
+                currentPierce--;
+                if (currentPierce <= 0)
+                {
+                    Destroy(gameObject);
+                    return;
+                }
+            }
+
             if (collision.CompareTag("Enemy"))
             {
                 EnemyStats enemy = collision.GetComponent<EnemyStats>();
