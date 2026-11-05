@@ -172,10 +172,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Enemies.EnemyStats
   enemyName: Goblin
-  maxHealth: 65
+  maxHealth: 175
   currentHealth: 0
-  moveSpeed: 2.8
-  attackDamage: 10
+  moveSpeed: 3.4
+  attackDamage: 14
   expValue: 10
   isBoss: 0
   expGemPrefab: {fileID: 3200322155391068914, guid: 0e773265557b69a4fa301b64bbe0ba63, type: 3}

@@ -10,8 +10,8 @@ namespace VampireSurvivors.Enemies
     {
         [Header("Boss Details")]
         public string bossTitle = "King Slime";
-        public float specialAttackCooldown = 4f;
-        public float chargeSpeedMultiplier = 2.5f;
+        public float specialAttackCooldown = 3.2f;
+        public float chargeSpeedMultiplier = 2.8f;
 
         private EnemyStats stats;
         private Rigidbody2D rb;
@@ -28,7 +28,7 @@ namespace VampireSurvivors.Enemies
 
         private void Start()
         {
-            PlayerController p = FindObjectOfType<PlayerController>();
+            PlayerController p = FindAnyObjectByType<PlayerController>();
             if (p != null) playerTarget = p.transform;
 
             // Notify UI of boss arrival

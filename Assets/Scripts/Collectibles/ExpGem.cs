@@ -36,6 +36,7 @@ namespace VampireSurvivors.Collectibles
         private void OnEnable()
         {
             isBeingCollected = false;
+            moveSpeed = 8.5f;
             activeGems.Add(this);
             FindPlayer();
 
@@ -214,6 +215,35 @@ namespace VampireSurvivors.Collectibles
             }
 
             gameObject.SetActive(false);
+        }
+
+        public void ForceCollect(PlayerStats targetPlayer = null)
+        {
+            if (targetPlayer != null)
+            {
+                playerStats = targetPlayer;
+                playerTransform = targetPlayer.transform;
+            }
+            else if (playerTransform == null)
+            {
+                FindPlayer();
+            }
+            isBeingCollected = true;
+            if (moveSpeed < 16f) moveSpeed = 16f;
+        }
+
+        public static int MagnetAllActiveGems(PlayerStats targetPlayer = null)
+        {
+            int count = 0;
+            foreach (var gem in activeGems)
+            {
+                if (gem != null && gem.gameObject.activeInHierarchy && !gem.isBeingCollected)
+                {
+                    gem.ForceCollect(targetPlayer);
+                    count++;
+                }
+            }
+            return count;
         }
     }
 }

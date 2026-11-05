@@ -172,7 +172,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Enemies.EnemyStats
   enemyName: Skeleton
-  maxHealth: 80
+  maxHealth: 150
   currentHealth: 0
   moveSpeed: 2.2
   attackDamage: 12

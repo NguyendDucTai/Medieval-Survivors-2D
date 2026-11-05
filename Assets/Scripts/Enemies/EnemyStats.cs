@@ -29,6 +29,7 @@ namespace VampireSurvivors.Enemies
         private bool isDying = false;
         private SpriteRenderer spriteRenderer;
         private Color originalColor = Color.white;
+        private string cachedSpeciesKey = null;
 
         private void Awake()
         {
@@ -56,7 +57,7 @@ namespace VampireSurvivors.Enemies
             currentHealth = maxHealth;
             isDying = false;
 
-            if (spriteRenderer != null) spriteRenderer.color = originalColor;
+            ApplyMapThemeTint();
 
             Collider2D col = GetComponent<Collider2D>();
             if (col != null) col.enabled = true;
@@ -76,9 +77,96 @@ namespace VampireSurvivors.Enemies
             Wave.WaveManager.UnregisterEnemy(this);
         }
 
+        public void ApplyMapThemeTint()
+        {
+            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null) return;
+
+            // Prioritize live environment background as the single source of truth for the active map
+            int mapIndex = 1;
+            if (Environment.MapEnvironmentManager.Instance != null)
+            {
+                mapIndex = Environment.MapEnvironmentManager.Instance.currentMapIndex;
+            }
+            else if (UI.MainMenuManager.Instance != null)
+            {
+                mapIndex = UI.MainMenuManager.Instance.selectedMapIndex;
+            }
+            else if (Environment.Hazards.MapHazardManager.Instance != null)
+            {
+                mapIndex = Environment.Hazards.MapHazardManager.Instance.activeMapIndex;
+            }
+            else
+            {
+                mapIndex = PlayerPrefs.GetInt("SelectedMapIndex", 1);
+            }
+
+            // ONLY apply red magma/ember tints on Map 3 (Infernal Volcano)
+            if (mapIndex == 3)
+            {
+                string species = GetSpeciesKey();
+                if (isBoss) originalColor = new Color(1.0f, 0.40f, 0.12f, 1.0f); // Magma Golem
+                else if (species == "Slime") originalColor = new Color(1.0f, 0.28f, 0.16f, 1.0f); // Magma Slime
+                else if (species == "Bat") originalColor = new Color(0.92f, 0.15f, 0.22f, 1.0f); // Crimson Bat
+                else if (species == "Skeleton") originalColor = new Color(1.0f, 0.58f, 0.45f, 1.0f); // Ash & Ember Skeleton
+                else if (species == "Goblin") originalColor = new Color(0.95f, 0.35f, 0.20f, 1.0f); // Ember Goblin
+                else originalColor = new Color(1.0f, 0.35f, 0.22f, 1.0f);
+            }
+            else
+            {
+                // All other maps (Emerald Meadow, Scorching Desert, Castle Ruins) retain 100% original sprite colors
+                originalColor = Color.white;
+            }
+
+            spriteRenderer.color = originalColor;
+        }
+
+        public static void RefreshAllEnemyColors()
+        {
+#if UNITY_6000_0_OR_NEWER
+            var allEnemies = UnityEngine.Object.FindObjectsByType<EnemyStats>(FindObjectsInactive.Include);
+#else
+            var allEnemies = UnityEngine.Object.FindObjectsOfType<EnemyStats>();
+#endif
+            for (int i = 0; i < allEnemies.Length; i++)
+            {
+                if (allEnemies[i] != null)
+                {
+                    allEnemies[i].ApplyMapThemeTint();
+                }
+            }
+        }
+
+        public string GetSpeciesKey()
+        {
+            if (isBoss) return "Boss";
+            if (!string.IsNullOrEmpty(cachedSpeciesKey)) return cachedSpeciesKey;
+
+            string combined = (enemyName ?? "") + "_" + gameObject.name;
+            if (spriteRenderer != null && spriteRenderer.sprite != null)
+            {
+                combined += "_" + spriteRenderer.sprite.name;
+            }
+
+            if (combined.IndexOf("Bat", StringComparison.OrdinalIgnoreCase) >= 0) cachedSpeciesKey = "Bat";
+            else if (combined.IndexOf("Skeleton", StringComparison.OrdinalIgnoreCase) >= 0) cachedSpeciesKey = "Skeleton";
+            else if (combined.IndexOf("Goblin", StringComparison.OrdinalIgnoreCase) >= 0) cachedSpeciesKey = "Goblin";
+            else if (combined.IndexOf("Plant", StringComparison.OrdinalIgnoreCase) >= 0 || combined.IndexOf("Flower", StringComparison.OrdinalIgnoreCase) >= 0) cachedSpeciesKey = "Plant";
+            else cachedSpeciesKey = "Slime";
+
+            return cachedSpeciesKey;
+        }
+
         public void TakeDamage(float amount, bool isCrit = false)
         {
             if (isDying) return;
+
+            // Apply UC-04 Grimoire Slayer Mastery Bonus (+2% / +5% / +10% damage against mastered species)
+            if (Data.SaveManager.Instance != null)
+            {
+                float masteryMult = Data.SaveManager.Instance.GetSpeciesDamageMultiplier(GetSpeciesKey());
+                amount *= masteryMult;
+            }
 
             currentHealth -= amount;
 
@@ -124,11 +212,33 @@ namespace VampireSurvivors.Enemies
                 player.RecordEnemyKill(maxHealth);
             }
 
-            // Check achievement progress
+            // Record Bestiary Species Kill in Grimoire (UC-04)
+            if (Data.SaveManager.Instance != null && !isBoss)
+            {
+                Data.SaveManager.Instance.RecordSpeciesKill(GetSpeciesKey());
+            }
+
+            // Check achievement progress (lifetime kills + current run kills)
             if (MetaProgression.AchievementManager.Instance != null)
             {
-                int totalKills = player != null ? player.inRunKills : 1;
+                int savedKills = (Data.SaveManager.Instance != null && Data.SaveManager.Instance.Data != null)
+                    ? Data.SaveManager.Instance.Data.lifetimeKills
+                    : 0;
+                int totalKills = savedKills + (player != null ? player.inRunKills : 1);
                 MetaProgression.AchievementManager.Instance.CheckProgress(MetaProgression.AchievementType.TotalKills, totalKills);
+            }
+
+            // Track Boss Kills for Boss Slayer Challenge & Archmage Unlock
+            if (isBoss)
+            {
+                if (Data.SaveManager.Instance != null)
+                {
+                    Data.SaveManager.Instance.RecordBossKill();
+                }
+                if (MetaProgression.AchievementManager.Instance != null && Data.SaveManager.Instance != null && Data.SaveManager.Instance.Data != null)
+                {
+                    MetaProgression.AchievementManager.Instance.CheckProgress(MetaProgression.AchievementType.BossDefeated, Data.SaveManager.Instance.Data.lifetimeBossKills);
+                }
             }
 
             // Disable collider

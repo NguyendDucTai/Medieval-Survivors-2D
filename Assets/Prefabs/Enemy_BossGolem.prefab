@@ -171,16 +171,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2fbe8c4ac42ee44ba9ee9354c19cc80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireSurvivors.Enemies.EnemyStats
-  enemyName: Enemy
-  maxHealth: 250
+  enemyName: Colossal Stone Golem
+  maxHealth: 8500
   currentHealth: 0
-  moveSpeed: 1
-  attackDamage: 25
-  expValue: 10
-  isBoss: 0
+  moveSpeed: 2.4
+  attackDamage: 50
+  expValue: 150
+  isBoss: 1
   expGemPrefab: {fileID: 3200322155391068914, guid: 0e773265557b69a4fa301b64bbe0ba63, type: 3}
   goldCoinPrefab: {fileID: 0}
-  bossChestPrefab: {fileID: 0}
+  bossChestPrefab: {fileID: 3200322155391068925, guid: 4567abcd1234567890abcdef12345691, type: 3}
   goldDropChance: 0.35
 --- !u!114 &4775211903567355478
 MonoBehaviour:
