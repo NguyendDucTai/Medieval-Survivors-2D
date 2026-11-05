@@ -68,8 +68,9 @@ namespace VampireSurvivors.UI
 
         public void OpenLevelUp()
         {
-            if (panel == null)
+            if (panel == null || panel.transform.parent == null || panel.transform.parent.name != "LevelUp_Canvas")
             {
+                if (panel != null) Destroy(panel);
                 BuildProceduralLevelUpUI();
             }
 
@@ -581,17 +582,57 @@ namespace VampireSurvivors.UI
         // =========================================================
         // PROCEDURAL UI BUILDER (Guarantees zero scene setup needed)
         // =========================================================
+        private void EnsureEventSystem()
+        {
+            var es = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (es == null)
+            {
+                GameObject esGO = new GameObject("EventSystem");
+                es = esGO.AddComponent<UnityEngine.EventSystems.EventSystem>();
+
+                bool moduleAdded = false;
+#if ENABLE_INPUT_SYSTEM
+                try
+                {
+                    System.Type inputSystemUIModuleType = System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+                    if (inputSystemUIModuleType != null)
+                    {
+                        var module = esGO.AddComponent(inputSystemUIModuleType);
+                        var assignMethod = inputSystemUIModuleType.GetMethod("AssignDefaultActions");
+                        if (assignMethod != null) assignMethod.Invoke(module, null);
+                        moduleAdded = true;
+                    }
+                }
+                catch { }
+#endif
+                if (!moduleAdded)
+                {
+                    esGO.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                }
+                DontDestroyOnLoad(esGO);
+            }
+            else
+            {
+                if (es.GetComponent<UnityEngine.EventSystems.BaseInputModule>() == null)
+                {
+                    es.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                }
+            }
+        }
+
         private void BuildProceduralLevelUpUI()
         {
+            EnsureEventSystem();
+
             Canvas targetCanvas = null;
 #if UNITY_6000_0_OR_NEWER
-            Canvas[] allCanvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            Canvas[] allCanvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include);
 #else
             Canvas[] allCanvases = UnityEngine.Object.FindObjectsOfType<Canvas>();
 #endif
             foreach (var c in allCanvases)
             {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay && !c.gameObject.name.Contains("World"))
+                if (c != null && c.gameObject.name == "LevelUp_Canvas")
                 {
                     targetCanvas = c;
                     break;
@@ -611,6 +652,14 @@ namespace VampireSurvivors.UI
                 scaler.matchWidthOrHeight = 0.5f;
 
                 canvasGO.AddComponent<GraphicRaycaster>();
+            }
+            else
+            {
+                targetCanvas.gameObject.SetActive(true);
+                if (targetCanvas.GetComponent<GraphicRaycaster>() == null)
+                {
+                    targetCanvas.gameObject.AddComponent<GraphicRaycaster>();
+                }
             }
 
             Font defaultFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -673,7 +722,7 @@ namespace VampireSurvivors.UI
             containerRT.anchorMin = new Vector2(0.5f, 0.5f);
             containerRT.anchorMax = new Vector2(0.5f, 0.5f);
             containerRT.pivot = new Vector2(0.5f, 0.5f);
-            containerRT.anchoredPosition = new Vector2(0f, -20f);
+            containerRT.anchoredPosition = new Vector2(0f, 25f);
             containerRT.sizeDelta = new Vector2(1300f, 560f);
             cardsContainer = containerGO.transform;
 
@@ -874,8 +923,8 @@ namespace VampireSurvivors.UI
             rerollRT.anchorMin = new Vector2(0.5f, 0f);
             rerollRT.anchorMax = new Vector2(0.5f, 0f);
             rerollRT.pivot = new Vector2(0.5f, 0f);
-            rerollRT.anchoredPosition = new Vector2(0f, 40f);
-            rerollRT.sizeDelta = new Vector2(260f, 55f);
+            rerollRT.anchoredPosition = new Vector2(0f, 35f);
+            rerollRT.sizeDelta = new Vector2(260f, 50f);
 
             Image rerollImg = rerollGO.AddComponent<Image>();
             rerollImg.color = new Color(0.2f, 0.4f, 0.65f);

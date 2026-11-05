@@ -50,7 +50,7 @@ namespace VampireSurvivors.MetaProgression
                 // Kill Milestones
                 new AchievementData { id = "kill_100", title = "Tân Binh Quét Quái", description = "Hạ gục tổng cộng 100 quái vật", type = AchievementType.TotalKills, targetValue = 100, goldReward = 200 },
                 new AchievementData { id = "kill_500", title = "Chiến Binh Gan Dạ", description = "Hạ gục tổng cộng 500 quái vật", type = AchievementType.TotalKills, targetValue = 500, goldReward = 500 },
-                new AchievementData { id = "kill_1000", title = "Bóng Đêm Tử Thần", description = "Hạ gục 1,000 quái vật - Mở khóa Sát Thủ Bóng Tối (Rogue)", type = AchievementType.TotalKills, targetValue = 1000, goldReward = 1000, unlockHeroReward = "Rogue" },
+                new AchievementData { id = "kill_1000", title = "Bóng Đêm Tử Thần", description = "Hạ gục 1,000 quái vật trên chiến trường", type = AchievementType.TotalKills, targetValue = 1000, goldReward = 1000 },
                 new AchievementData { id = "kill_2500", title = "Đao Phủ Hàng Loạt", description = "Hạ gục tổng cộng 2,500 quái vật", type = AchievementType.TotalKills, targetValue = 2500, goldReward = 2000 },
                 new AchievementData { id = "kill_5000", title = "Thần Hủy Diệt", description = "Hạ gục tổng cộng 5,000 quái vật", type = AchievementType.TotalKills, targetValue = 5000, goldReward = 5000 },
                 new AchievementData { id = "kill_10000", title = "Huyền Thoại Bất Diệt", description = "Hạ gục 10,000 quái vật trên mọi chiến trường", type = AchievementType.TotalKills, targetValue = 10000, goldReward = 10000 },
@@ -58,14 +58,14 @@ namespace VampireSurvivors.MetaProgression
                 // Survival Milestones
                 new AchievementData { id = "survive_180", title = "Bước Đầu Sống Sót", description = "Sống sót liên tục 3 phút trong 1 trận", type = AchievementType.SurvivalTime, targetValue = 180, goldReward = 200 },
                 new AchievementData { id = "survive_300", title = "Ý Chí Kiên Cường", description = "Sống sót liên tục 5 phút trong 1 trận", type = AchievementType.SurvivalTime, targetValue = 300, goldReward = 500 },
-                new AchievementData { id = "survive_600", title = "Bậc Thầy Trụ Hạng", description = "Sống sót liên tục 10 phút trong 1 trận", type = AchievementType.SurvivalTime, targetValue = 600, goldReward = 1000 },
+                new AchievementData { id = "survive_600", title = "Bậc Thầy Trụ Hạng", description = "Sống sót liên tục 10 phút trong 1 trận - Mở khóa Valen (Sát Thủ Bóng Đêm)", type = AchievementType.SurvivalTime, targetValue = 600, goldReward = 1000, unlockHeroReward = "ShadowKnight" },
                 new AchievementData { id = "survive_900", title = "Chiến Binh Thép", description = "Sống sót liên tục 15 phút trong 1 trận", type = AchievementType.SurvivalTime, targetValue = 900, goldReward = 2000 },
                 new AchievementData { id = "survive_1200", title = "Đấng Cứu Thế Vương Triều", description = "Sống sót trọn vẹn 20 phút - Thắng trận hoàn toàn!", type = AchievementType.SurvivalTime, targetValue = 1200, goldReward = 5000 },
 
                 // Level Milestones
                 new AchievementData { id = "level_10", title = "Khai Phá Tiềm Năng", description = "Đạt Cấp 10 trong một trận đấu", type = AchievementType.LevelReached, targetValue = 10, goldReward = 200 },
                 new AchievementData { id = "level_20", title = "Sức Mạnh Bộc Phát", description = "Đạt Cấp 20 trong một trận đấu", type = AchievementType.LevelReached, targetValue = 20, goldReward = 500 },
-                new AchievementData { id = "level_30", title = "Đại Pháp Sư Tối Thượng", description = "Đạt Cấp 30 - Mở khóa Đại Pháp Sư (Archmage)", type = AchievementType.LevelReached, targetValue = 30, goldReward = 1000, unlockHeroReward = "Archmage" },
+                new AchievementData { id = "level_30", title = "Pháp Lực Vô Song", description = "Đạt Cấp 30 trong một trận đấu", type = AchievementType.LevelReached, targetValue = 30, goldReward = 1000 },
                 new AchievementData { id = "level_40", title = "Đỉnh Cao Tu Vi", description = "Đạt Cấp 40 trong một trận đấu", type = AchievementType.LevelReached, targetValue = 40, goldReward = 2500 },
 
                 // Evolution Milestones
@@ -77,11 +77,14 @@ namespace VampireSurvivors.MetaProgression
                 new AchievementData { id = "boss_slime", title = "Kẻ Diệt Vua Nhầy", description = "Hạ gục Vua Slime (King Slime)", type = AchievementType.BossDefeated, targetValue = 1, goldReward = 500 },
                 new AchievementData { id = "boss_skeleton", title = "Nghiền Nát Xương Trắng", description = "Hạ gục Đại Tướng Bộ Xương (Skeleton Warlord)", type = AchievementType.BossDefeated, targetValue = 2, goldReward = 1000 },
                 new AchievementData { id = "boss_golem", title = "Kẻ Chinh Phục Thần Thạch", description = "Hạ gục Đại Trùm Thế Giới: Golem Khổng Lồ", type = AchievementType.BossDefeated, targetValue = 3, goldReward = 3000 },
+                new AchievementData { id = "boss_5_total", title = "Kẻ Hủy Diệt Đầu Sỏ", description = "Hạ gục tổng cộng 5 Đại Trùm - Mở khóa Aurelius (Đại Pháp Sư Sét)", type = AchievementType.BossDefeated, targetValue = 5, goldReward = 1500, unlockHeroReward = "Archmage" },
 
                 // Gold Economy Milestones
                 new AchievementData { id = "gold_1000", title = "Túi Tiền Rủng Rỉnh", description = "Thu thập tổng cộng 1,000 Vàng", type = AchievementType.GoldEarned, targetValue = 1000, goldReward = 300 },
+                new AchievementData { id = "gold_3000", title = "Đại Gia Chiến Trường", description = "Tích lũy tổng cộng 3,000 Vàng", type = AchievementType.GoldEarned, targetValue = 3000, goldReward = 1000 },
                 new AchievementData { id = "gold_5000", title = "Thương Nhân Giàu Có", description = "Thu thập tổng cộng 5,000 Vàng", type = AchievementType.GoldEarned, targetValue = 5000, goldReward = 1500 },
-                new AchievementData { id = "gold_20000", title = "Kho Báu Hoàng Gia", description = "Thu thập tổng cộng 20,000 Vàng", type = AchievementType.GoldEarned, targetValue = 20000, goldReward = 6000 }
+                new AchievementData { id = "gold_20000", title = "Kho Báu Hoàng Gia", description = "Thu thập tổng cộng 20,000 Vàng", type = AchievementType.GoldEarned, targetValue = 20000, goldReward = 6000 },
+                new AchievementData { id = "gold_50000", title = "Phú Hộ Hoàng Gia", description = "Tích lũy tổng cộng 50,000 Vàng trong suốt quá trình chơi", type = AchievementType.GoldEarned, targetValue = 50000, goldReward = 10000 }
             };
         }
 
