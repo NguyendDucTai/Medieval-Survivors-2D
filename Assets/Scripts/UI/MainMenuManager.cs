@@ -30,6 +30,52 @@ namespace VampireSurvivors.UI
             public int armor;
             public string passiveDescription;
             public Sprite portraitSprite;
+
+            // Unlock System Properties
+            public bool isStarter = false;
+            public int purchasePrice = 0;
+            public string unlockConditionText = "";
+            public string unlockTip = "";
+
+            public string GetProgressText()
+            {
+                if (isStarter) return "Đã mở khóa mặc định";
+
+                if (heroKey == "ShadowKnight")
+                {
+                    float bestTime = 0f;
+                    if (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
+                    {
+                        bestTime = VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSeconds;
+                    }
+                    int m = Mathf.FloorToInt(bestTime / 60f);
+                    int s = Mathf.FloorToInt(bestTime % 60f);
+                    int pct = Mathf.Clamp(Mathf.RoundToInt((bestTime / 600f) * 100f), 0, 100);
+                    return $"{m:00}:{s:00} / 10:00 ({pct}%)" + (bestTime >= 600f ? " - ĐẠT!" : "");
+                }
+                else if (heroKey == "Archmage")
+                {
+                    int kills = 0;
+                    if (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
+                    {
+                        kills = VampireSurvivors.Data.SaveManager.Instance.Data.lifetimeBossKills;
+                    }
+                    int pct = Mathf.Clamp(Mathf.RoundToInt((kills / 5f) * 100f), 0, 100);
+                    return $"{kills} / 5 Trùm ({pct}%)" + (kills >= 5 ? " - ĐẠT!" : "");
+                }
+                else if (heroKey == "Archer")
+                {
+                    bool isPurchased = (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.IsHeroUnlocked("Archer"));
+                    if (isPurchased) return "Đã chiêu mộ thành công!";
+
+                    int gold = (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
+                        ? VampireSurvivors.Data.SaveManager.Instance.Data.gold : 0;
+                    int pct = Mathf.Clamp(Mathf.RoundToInt((gold / 10000f) * 100f), 0, 100);
+                    return $"{gold:N0} / 10,000 Vàng trong kho ({pct}%)" + (gold >= 10000 ? " - ĐỦ TIỀN CHIÊU MỘ!" : $" - Còn thiếu {(10000 - gold):N0} Vàng");
+                }
+
+                return "Chưa đạt";
+            }
         }
 
         [System.Serializable]
@@ -68,6 +114,7 @@ namespace VampireSurvivors.UI
 
         // Hero Select UI references
         private GameObject portraitBoxGO;
+        private GameObject portraitLockOverlayGO;
         private GameObject infoBoxGO;
         private Image imgHeroPortrait;
         private Text txtHeroName;
@@ -76,6 +123,14 @@ namespace VampireSurvivors.UI
         private Text txtHeroPassive;
         private List<GameObject> heroSlotIndicators = new List<GameObject>();
         private List<GameObject> heroSlotButtons = new List<GameObject>();
+        private List<Image> heroSlotIcons = new List<Image>();
+        private List<GameObject> heroSlotLocks = new List<GameObject>();
+        private GameObject heroConfirmBtnGO;
+        private GameObject heroConfirmOverlayGO;
+        private Image imgHeroConfirmOverlayBg;
+        private Outline outlineHeroConfirmOverlay;
+        private Text txtHeroConfirmOverlay;
+        private Coroutine warningToastCoroutine;
 
         // Map Select UI references
         private GameObject mapPreviewBoxGO;
@@ -102,6 +157,9 @@ namespace VampireSurvivors.UI
         private Sprite sprArrowLeft;
         private Sprite sprArrowRight;
         private Sprite sprBtnShop;
+        private Sprite sprBtnGrimoire;
+        private Sprite sprHeroLocked;
+        private Sprite sprHeroBuy;
 
         private Dictionary<GameObject, Coroutine> runningModalAnims = new Dictionary<GameObject, Coroutine>();
 
@@ -143,17 +201,33 @@ namespace VampireSurvivors.UI
             sprArrowLeft = LoadSpriteAtPath("Assets/Sprites/UI/Arrow_Left.png");
             sprArrowRight = LoadSpriteAtPath("Assets/Sprites/UI/Arrow_Right.png");
             sprBtnShop = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Shop.png");
+            sprBtnGrimoire = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Grimoire.png");
+            sprHeroLocked = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Hero_Locked.png");
+            sprHeroBuy = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Hero_Buy.png");
         }
 
         private void Start()
         {
             EnsureEventSystem();
             selectedHeroIndex = Mathf.Clamp(PlayerPrefs.GetInt("SelectedHeroIndex", 0), 0, heroes.Count - 1);
+            if (!IsHeroUnlocked(heroes[selectedHeroIndex].heroKey))
+            {
+                selectedHeroIndex = 0; // Default to Sir Roland
+                PlayerPrefs.SetInt("SelectedHeroIndex", 0);
+                PlayerPrefs.Save();
+            }
             selectedMapIndex = Mathf.Clamp(PlayerPrefs.GetInt("SelectedMapIndex", 0), 0, maps.Count - 1);
 
             BuildMenuUI();
 
             // Setup in-game background terrain with the currently selected map
+            if (selectedMapIndex < maps.Count)
+            {
+                PlayerPrefs.SetFloat("SelectedMapGoldBonus", maps[selectedMapIndex].goldBonusValue);
+                PlayerPrefs.SetInt("SelectedMapIndex", selectedMapIndex);
+                PlayerPrefs.Save();
+            }
+
             ApplySelectedMapToEnvironment();
 
             if (PlayerPrefs.GetInt("AutoStartBattle", 0) == 1)
@@ -187,6 +261,11 @@ namespace VampireSurvivors.UI
             if (Input.GetKeyDown(KeyCode.B))
             {
                 ShopUI.GetOrCreate().OpenShop();
+            }
+
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                AchievementUI.GetOrCreate().OpenAchievements();
             }
 
             if (Input.GetKeyDown(KeyCode.H))
@@ -293,10 +372,25 @@ namespace VampireSurvivors.UI
             }
         }
 
+        public bool IsHeroUnlocked(string heroKey)
+        {
+            if (string.IsNullOrEmpty(heroKey)) return false;
+            // Starters: Roland (Knight), Ignis (Mage), Sylph (Ranger) are always unlocked from run 1
+            if (heroKey == "Knight" || heroKey == "Mage" || heroKey == "Ranger") return true;
+
+            if (VampireSurvivors.Data.SaveManager.Instance != null)
+            {
+                return VampireSurvivors.Data.SaveManager.Instance.IsHeroUnlocked(heroKey);
+            }
+
+            return false;
+        }
+
         private void SetupHeroData()
         {
             heroes.Clear();
 
+            // 1. STARTER: Knight (Sir Roland)
             heroes.Add(new HeroData
             {
                 heroKey = "Knight",
@@ -306,9 +400,13 @@ namespace VampireSurvivors.UI
                 speed = 5.0f,
                 mightPercent = 20,
                 armor = 2,
-                passiveDescription = "Lưỡi kiếm hình bán nguyệt quét sạch quái phía trước. Tăng 20% phạm vi sát thương và khả năng chống chịu cực cao."
+                passiveDescription = "Lưỡi kiếm hình bán nguyệt quét sạch quái phía trước. Tăng 20% phạm vi sát thương và khả năng chống chịu cực cao.",
+                isStarter = true,
+                unlockConditionText = "Mở khóa mặc định từ đầu trận.",
+                unlockTip = "Mở sẵn"
             });
 
+            // 2. LOCKED: ShadowKnight (Valen - "kiếm tím")
             heroes.Add(new HeroData
             {
                 heroKey = "ShadowKnight",
@@ -318,9 +416,13 @@ namespace VampireSurvivors.UI
                 speed = 6.2f,
                 mightPercent = 30,
                 armor = 0,
-                passiveDescription = "Vung lưỡi đao bóng đêm tím xuyên giáp cực nhanh. Tốc độ di chuyển phi phàm giúp né đòn quái vật linh hoạt."
+                passiveDescription = "Vung lưỡi đao bóng đêm tím xuyên giáp cực nhanh. Tốc độ di chuyển phi phàm giúp né đòn quái vật linh hoạt.",
+                isStarter = false,
+                unlockConditionText = "Sống sót tối thiểu 10 phút (600 giây) trong 1 trận chiến bất kỳ.",
+                unlockTip = "Thử thách Sinh Tồn"
             });
 
+            // 3. STARTER: Mage (Ignis)
             heroes.Add(new HeroData
             {
                 heroKey = "Mage",
@@ -330,9 +432,13 @@ namespace VampireSurvivors.UI
                 speed = 4.8f,
                 mightPercent = 40,
                 armor = 0,
-                passiveDescription = "Phóng cầu lửa tự tìm mục tiêu và phát nổ diện rộng, thiêu rụi toàn bộ bầy quái vật xung quanh."
+                passiveDescription = "Phóng cầu lửa tự tìm mục tiêu và phát nổ diện rộng, thiêu rụi toàn bộ bầy quái vật xung quanh.",
+                isStarter = true,
+                unlockConditionText = "Mở khóa mặc định từ đầu trận.",
+                unlockTip = "Mở sẵn"
             });
 
+            // 4. LOCKED: Archmage (Aurelius - "phù thủy cầu xanh")
             heroes.Add(new HeroData
             {
                 heroKey = "Archmage",
@@ -342,9 +448,13 @@ namespace VampireSurvivors.UI
                 speed = 5.0f,
                 mightPercent = 35,
                 armor = 1,
-                passiveDescription = "Triệu hồi các tia sấm sét uy lực từ trên trời giáng thẳng xuống đầu kẻ địch nguy hiểm nhất."
+                passiveDescription = "Triệu hồi các tia sấm sét uy lực từ trên trời giáng thẳng xuống đầu kẻ địch nguy hiểm nhất.",
+                isStarter = false,
+                unlockConditionText = "Hạ gục tổng cộng 5 Đại Trùm (Golem / Trùm đợt quái qua các trận).",
+                unlockTip = "Thử thách Diệt Trùm"
             });
 
+            // 5. STARTER: Ranger (Sylph)
             heroes.Add(new HeroData
             {
                 heroKey = "Ranger",
@@ -354,9 +464,13 @@ namespace VampireSurvivors.UI
                 speed = 5.6f,
                 mightPercent = 25,
                 armor = 1,
-                passiveDescription = "Bắn liên hoàn các mũi tên tầm cực xa xuyên thủng hàng ngũ quái vật, tốc độ bắn siêu nhanh."
+                passiveDescription = "Bắn liên hoàn các mũi tên tầm cực xa xuyên thủng hàng ngũ quái vật, tốc độ bắn siêu nhanh.",
+                isStarter = true,
+                unlockConditionText = "Mở khóa mặc định từ đầu trận.",
+                unlockTip = "Mở sẵn"
             });
 
+            // 6. LOCKED: Archer (Aeris - "cung thủ bắn tên ánh sáng bao quanh")
             heroes.Add(new HeroData
             {
                 heroKey = "Archer",
@@ -366,7 +480,11 @@ namespace VampireSurvivors.UI
                 speed = 5.8f,
                 mightPercent = 35,
                 armor = 1,
-                passiveDescription = "Bắn liên hoàn các mũi tên ma thuật bão tố cuồng phong xuyên thấu kẻ địch với tốc độ bắn cực nhanh."
+                passiveDescription = "Bắn liên hoàn các mũi tên ma thuật bão tố cuồng phong xuyên thấu kẻ địch với tốc độ bắn cực nhanh.",
+                isStarter = false,
+                purchasePrice = 10000,
+                unlockConditionText = "Chiêu mộ trực tiếp bằng 10.000 Vàng từ kho quỹ của bạn.",
+                unlockTip = "Chiêu Mộ Tướng"
             });
 
             heroes[0].portraitSprite = LoadHeroPortrait("Assets/Sprites/Characters/Hero_Knight_Idle.png");
@@ -387,7 +505,7 @@ namespace VampireSurvivors.UI
                 difficultyStars = "⭐⭐☆☆☆ (Tiêu Chuẩn)",
                 goldMultiplier = "VÀNG x1.0 | EXP x1.0",
                 monstersDescription = "Quái vật: Slime Xanh, Dơi Rừng, Hồn Ma Cổ Xưa",
-                hazardDescription = "Địa hình rộng rãi, bằng phẳng. Rất thích hợp để làm quen bảng kỹ năng và thử nghiệm build.",
+                hazardDescription = "Hiểm họa & Tương tác: Định kỳ mọc Bụi Cây Cổ Thụ 16x16 — phá hủy rơi Bình Máu (+25% HP) hoặc Nam Châm hút toàn bộ ExpGem!",
                 goldBonusValue = 1.0f
             });
 
@@ -397,7 +515,7 @@ namespace VampireSurvivors.UI
                 difficultyStars = "⭐⭐⭐☆☆ (Thử Thách Vừa)",
                 goldMultiplier = "VÀNG x1.3 | EXP x1.2",
                 monstersDescription = "Quái vật: Bọ Cạp Sa Mạc, Xác Ướp Lăng Mộ, Giun Cát Cổ Đại",
-                hazardDescription = "Bão cát cuộn xoáy định kỳ làm giảm 25% tầm nhìn, bãi cát lún làm giảm tốc độ di chuyển nhưng rơi nhiều Vàng hơn 30%!",
+                hazardDescription = "Hiểm họa & Tương tác: Định kỳ nổi cơn Bão Cát Sa Mạc đẩy lùi nhẹ theo hướng gió và giảm tầm nhìn, thưởng thêm +30% Vàng!",
                 goldBonusValue = 1.3f
             });
 
@@ -407,7 +525,7 @@ namespace VampireSurvivors.UI
                 difficultyStars = "⭐⭐⭐⭐☆ (Thử Thách / Khó)",
                 goldMultiplier = "VÀNG x1.5 | EXP x1.3",
                 monstersDescription = "Quái vật: Binh Đoàn Bộ Xương, Đội Quân Yêu Tinh Goblin",
-                hazardDescription = "Hành lang đá cổ hẹp, quái vật kéo đến với số lượng đông hơn 30%. Tăng 50% tiền vàng thu được!",
+                hazardDescription = "Hiểm họa & Tương tác: Cổ Ngữ Triệu Hồi trên mặt đất — đứng trong vòng 10 giây triệu hồi Tinh Anh rơi mưa Vàng & ExpGem (+50% Vàng)!",
                 goldBonusValue = 1.5f
             });
 
@@ -417,7 +535,7 @@ namespace VampireSurvivors.UI
                 difficultyStars = "⭐⭐⭐⭐⭐ (Ác Mộng / Ác Chiến)",
                 goldMultiplier = "VÀNG x2.5 | EXP x2.0",
                 monstersDescription = "Quái vật: Boss Golem Nham Thạch, Quái Hỏa Ngục Hung Tợn",
-                hazardDescription = "Vùng đất nham thạch rực lửa. Quái vật trâu hơn và hung hãn gấp đôi, nhưng rơi gấp 2.5 lần Vàng!",
+                hazardDescription = "Hiểm họa & Tương tác: Mưa Thiên Thạch rơi dồn dập và tăng cấp theo thời gian sống sót. Gây sát thương cả người chơi lẫn quái (dụ quái vào vùng nổ). Thưởng +150% Vàng!",
                 goldBonusValue = 2.5f
             });
 
@@ -477,6 +595,21 @@ namespace VampireSurvivors.UI
 
         private Sprite LoadSpriteAtPath(string path)
         {
+            if (!string.IsNullOrEmpty(path) && path.Contains("Grimoire") && System.IO.File.Exists(path))
+            {
+                try
+                {
+                    byte[] freshData = System.IO.File.ReadAllBytes(path);
+                    Texture2D freshTex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    if (freshTex.LoadImage(freshData))
+                    {
+                        freshTex.filterMode = FilterMode.Bilinear;
+                        freshTex.wrapMode = TextureWrapMode.Clamp;
+                        return Sprite.Create(freshTex, new Rect(0, 0, freshTex.width, freshTex.height), new Vector2(0.5f, 0.5f), 100f);
+                    }
+                }
+                catch { }
+            }
 #if UNITY_EDITOR
             Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
             if (s != null) return s;
@@ -519,6 +652,7 @@ namespace VampireSurvivors.UI
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
+            scaler.dynamicPixelsPerUnit = 2.5f;
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
@@ -620,6 +754,55 @@ namespace VampireSurvivors.UI
             UIButtonJuice shopJuice = btnShop.AddComponent<UIButtonJuice>();
             shopJuice.hoverScale = 1.08f;
             shopJuice.pressScale = 0.92f;
+
+            // 3b. Grimoire & Achievements Button on Title Screen (Top left corner, uses custom Btn_Grimoire.png plaque)
+            GameObject btnGrimoire = CreateUIObject("Btn_GrimoireTitle", titlePanel.transform);
+            RectTransform grimRT = btnGrimoire.GetComponent<RectTransform>();
+            grimRT.anchoredPosition = new Vector2(-720, 440);
+
+            Image grimImg = btnGrimoire.AddComponent<Image>();
+            if (sprBtnGrimoire != null)
+            {
+                grimRT.sizeDelta = new Vector2(300, 99);
+                grimImg.sprite = sprBtnGrimoire;
+                grimImg.color = Color.white;
+                grimImg.preserveAspect = true;
+            }
+            else
+            {
+                grimRT.sizeDelta = new Vector2(300, 92);
+                grimImg.color = new Color(0.20f, 0.13f, 0.08f, 0.98f);
+
+                Outline grimOutline = btnGrimoire.AddComponent<Outline>();
+                grimOutline.effectColor = new Color(0.92f, 0.74f, 0.22f, 1f);
+                grimOutline.effectDistance = new Vector2(3f, -3f);
+
+                GameObject grimTxtGO = CreateUIObject("Text", btnGrimoire.transform);
+                RectTransform grimTxtRT = grimTxtGO.GetComponent<RectTransform>();
+                grimTxtRT.anchorMin = Vector2.zero;
+                grimTxtRT.anchorMax = Vector2.one;
+                grimTxtRT.offsetMin = Vector2.zero;
+                grimTxtRT.offsetMax = Vector2.zero;
+
+                Text grimTxt = grimTxtGO.AddComponent<Text>();
+                grimTxt.font = defaultFont;
+                grimTxt.fontSize = 22;
+                grimTxt.fontStyle = FontStyle.Bold;
+                grimTxt.alignment = TextAnchor.MiddleCenter;
+                grimTxt.color = new Color(1f, 0.92f, 0.40f);
+                grimTxt.text = "\uD83D\uDCD6 C\u1ED4 TH\u01AF [J]";
+
+                Outline grimTxtOutline = grimTxtGO.AddComponent<Outline>();
+                grimTxtOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+                grimTxtOutline.effectDistance = new Vector2(2f, -2f);
+            }
+
+            Button grimBtn = btnGrimoire.AddComponent<Button>();
+            grimBtn.onClick.AddListener(() => AchievementUI.GetOrCreate().OpenAchievements());
+
+            UIButtonJuice grimJuice = btnGrimoire.AddComponent<UIButtonJuice>();
+            grimJuice.hoverScale = 1.08f;
+            grimJuice.pressScale = 0.92f;
 
             // 4. HERO SELECT MODAL
             BuildHeroSelectModal(canvasGO.transform, defaultFont);
@@ -741,6 +924,26 @@ namespace VampireSurvivors.UI
             imgHeroPortrait.preserveAspect = true;
             imgHeroPortrait.raycastTarget = false;
 
+            // Lock Overlay on Portrait: Centered glowing lock icon when hero is locked
+            portraitLockOverlayGO = CreateUIObject("PortraitLockOverlay", portraitBoxGO.transform);
+            RectTransform ploRect = portraitLockOverlayGO.GetComponent<RectTransform>();
+            ploRect.anchorMin = Vector2.zero;
+            ploRect.anchorMax = Vector2.one;
+            ploRect.sizeDelta = Vector2.zero;
+
+            Image ploBg = portraitLockOverlayGO.AddComponent<Image>();
+            ploBg.color = new Color(0.04f, 0.04f, 0.07f, 0.52f);
+            ploBg.raycastTarget = false;
+
+            Text ploText = CreateText("LockIcon", portraitLockOverlayGO.transform, "🔒", 46, FontStyle.Bold, new Color(1f, 0.85f, 0.3f), TextAnchor.MiddleCenter, font);
+            ploText.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 80);
+            AddOutline(ploText.gameObject, new Color(0.1f, 0.05f, 0.02f, 1f), 2.5f);
+
+            UIButtonJuice ploJuice = portraitLockOverlayGO.AddComponent<UIButtonJuice>();
+            ploJuice.enableBreathing = true;
+            ploJuice.breathingAmount = 0.08f;
+            ploJuice.breathingSpeed = 2.0f;
+
             // Gentle floating on portrait (Breathing disabled to avoid blurring pixel art)
             UIButtonJuice portraitJuice = portraitBoxGO.AddComponent<UIButtonJuice>();
             portraitJuice.enableFloating = true;
@@ -765,7 +968,9 @@ namespace VampireSurvivors.UI
             vlg.childControlHeight = false;
 
             txtHeroName = CreateText("TxtHeroName", infoBoxGO.transform, "SIR ROLAND - HIỆP SĨ THÁNH", 23, FontStyle.Bold, new Color(1f, 0.88f, 0.35f), TextAnchor.UpperLeft, font);
-            txtHeroName.GetComponent<RectTransform>().sizeDelta = new Vector2(414, 30);
+            txtHeroName.horizontalOverflow = HorizontalWrapMode.Overflow;
+            txtHeroName.verticalOverflow = VerticalWrapMode.Overflow;
+            txtHeroName.GetComponent<RectTransform>().sizeDelta = new Vector2(480, 32);
             AddOutline(txtHeroName.gameObject, new Color(0.12f, 0.06f, 0.02f, 1f), 2f);
 
             txtHeroWeapon = CreateText("TxtHeroWeapon", infoBoxGO.transform, "Vũ khí khởi đầu: Thánh Kiếm (Holy Broadsword)", 16, FontStyle.Bold, new Color(0.42f, 0.78f, 1f), TextAnchor.UpperLeft, font);
@@ -813,6 +1018,8 @@ namespace VampireSurvivors.UI
             float stepX = 66f;
             heroSlotIndicators.Clear();
             heroSlotButtons.Clear();
+            heroSlotIcons.Clear();
+            heroSlotLocks.Clear();
 
             for (int i = 0; i < heroes.Count; i++)
             {
@@ -833,7 +1040,7 @@ namespace VampireSurvivors.UI
                 bgImg.raycastTarget = false;
                 AddOutline(slotBg, new Color(0.35f, 0.25f, 0.15f, 0.95f), 1.5f);
 
-                // Mini portrait icon inside slot (100% visible, sharp pixel art)
+                // Mini portrait icon inside slot (sharp pixel art)
                 GameObject iconGO = CreateUIObject("Icon", btnSlot.transform);
                 RectTransform iconRect = iconGO.GetComponent<RectTransform>();
                 iconRect.anchorMin = new Vector2(0.08f, 0.08f);
@@ -844,6 +1051,20 @@ namespace VampireSurvivors.UI
                 iconImg.sprite = heroes[i].portraitSprite;
                 iconImg.preserveAspect = true;
                 iconImg.raycastTarget = false;
+                heroSlotIcons.Add(iconImg);
+
+                // Mini padlock on slot for locked heroes
+                GameObject slotLockGO = CreateUIObject("SlotLock", btnSlot.transform);
+                RectTransform slRect = slotLockGO.GetComponent<RectTransform>();
+                slRect.anchorMin = Vector2.zero;
+                slRect.anchorMax = Vector2.one;
+                slRect.sizeDelta = Vector2.zero;
+
+                Text slTxt = CreateText("LockBadge", slotLockGO.transform, "🔒", 17, FontStyle.Bold, new Color(1f, 0.9f, 0.35f), TextAnchor.LowerRight, font);
+                slTxt.GetComponent<RectTransform>().anchoredPosition = new Vector2(-4, 3);
+                slTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(24, 24);
+                AddOutline(slTxt.gameObject, new Color(0.08f, 0.04f, 0.01f, 1f), 1.5f);
+                heroSlotLocks.Add(slotLockGO);
 
                 // HOLLOW Glowing Golden Highlight Frame (Does NOT cover the character inside!)
                 GameObject indicator = CreateUIObject("Indicator", btnSlot.transform);
@@ -885,9 +1106,31 @@ namespace VampireSurvivors.UI
             }
 
             // CONFIRM button: responsive interactive button over painted button at (285, -210)
-            GameObject confirmBtn = CreateJuicyButton("Btn_ConfirmHero", frameGO.transform, new Vector2(285, -210), new Vector2(200, 80), () => OpenHeroSelect(false), 1.08f, 0.92f);
+            GameObject confirmBtn = CreateJuicyButton("Btn_ConfirmHero", frameGO.transform, new Vector2(252, -226), new Vector2(293, 66), OnConfirmHeroClicked, 1.08f, 0.92f);
+            heroConfirmBtnGO = confirmBtn;
             Image cbImg = confirmBtn.GetComponent<Image>();
             if (cbImg != null) cbImg.color = new Color(0f, 0f, 0f, 0.01f);
+
+            // Overlay banner on top of confirm button for locked / purchasable heroes
+            heroConfirmOverlayGO = CreateUIObject("ConfirmOverlay", confirmBtn.transform);
+            RectTransform coRect = heroConfirmOverlayGO.GetComponent<RectTransform>();
+            coRect.anchorMin = Vector2.zero;
+            coRect.anchorMax = Vector2.one;
+            coRect.offsetMin = Vector2.zero;
+            coRect.offsetMax = Vector2.zero;
+
+            imgHeroConfirmOverlayBg = heroConfirmOverlayGO.AddComponent<Image>();
+            imgHeroConfirmOverlayBg.color = new Color(0.35f, 0.22f, 0.05f, 0.98f);
+            imgHeroConfirmOverlayBg.raycastTarget = false;
+
+            outlineHeroConfirmOverlay = heroConfirmOverlayGO.AddComponent<Outline>();
+            outlineHeroConfirmOverlay.effectColor = new Color(1f, 0.85f, 0.25f, 1f);
+            outlineHeroConfirmOverlay.effectDistance = new Vector2(2f, -2f);
+
+            txtHeroConfirmOverlay = CreateText("TxtOverlay", heroConfirmOverlayGO.transform, "MUA: 10.000 🪙", 18, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter, font);
+            txtHeroConfirmOverlay.GetComponent<RectTransform>().sizeDelta = new Vector2(190, 70);
+            txtHeroConfirmOverlay.raycastTarget = false;
+            AddOutline(txtHeroConfirmOverlay.gameObject, new Color(0.1f, 0.05f, 0.02f, 1f), 2f);
 
             // Close (X) button at Top Right
             CreateJuicyButton("Btn_Close", frameGO.transform, new Vector2(560, 300), new Vector2(54, 54), () => OpenHeroSelect(false), sprBtnClose, 1.25f, 0.85f);
@@ -1197,8 +1440,13 @@ namespace VampireSurvivors.UI
         {
             if (index < 0 || index >= heroes.Count) return;
             selectedHeroIndex = index;
-            PlayerPrefs.SetInt("SelectedHeroIndex", selectedHeroIndex);
-            PlayerPrefs.Save();
+
+            // Only persist to PlayerPrefs if unlocked
+            if (IsHeroUnlocked(heroes[selectedHeroIndex].heroKey))
+            {
+                PlayerPrefs.SetInt("SelectedHeroIndex", selectedHeroIndex);
+                PlayerPrefs.Save();
+            }
 
             UpdateHeroDisplay();
 
@@ -1223,15 +1471,137 @@ namespace VampireSurvivors.UI
         {
             if (selectedHeroIndex < 0 || selectedHeroIndex >= heroes.Count) return;
             HeroData h = heroes[selectedHeroIndex];
+            bool unlocked = IsHeroUnlocked(h.heroKey);
 
-            if (txtHeroName != null) txtHeroName.text = h.heroName;
-            if (txtHeroWeapon != null) txtHeroWeapon.text = "Vũ khí khởi đầu: " + h.weaponName;
-            if (txtHeroStats != null) txtHeroStats.text = $"Máu: {h.hp}       •   Tốc độ: {h.speed:F1}\nSát thương: +{h.mightPercent}%   •   Giáp: +{h.armor}";
-            if (txtHeroPassive != null) txtHeroPassive.text = "Đặc tính: " + h.passiveDescription;
-
-            if (imgHeroPortrait != null && h.portraitSprite != null)
+            if (unlocked)
             {
-                imgHeroPortrait.sprite = h.portraitSprite;
+                if (txtHeroName != null)
+                {
+                    txtHeroName.text = h.heroName;
+                    txtHeroName.color = new Color(1f, 0.88f, 0.35f);
+                }
+                if (txtHeroWeapon != null)
+                {
+                    txtHeroWeapon.text = "Vũ khí khởi đầu: " + h.weaponName;
+                    txtHeroWeapon.color = new Color(0.42f, 0.78f, 1f);
+                }
+                if (txtHeroStats != null)
+                {
+                    txtHeroStats.text = $"Máu: {h.hp}       •   Tốc độ: {h.speed:F1}\nSát thương: +{h.mightPercent}%   •   Giáp: +{h.armor}";
+                }
+                if (txtHeroPassive != null)
+                {
+                    txtHeroPassive.text = "Đặc tính: " + h.passiveDescription;
+                }
+
+                if (imgHeroPortrait != null)
+                {
+                    imgHeroPortrait.color = Color.white;
+                    if (h.portraitSprite != null) imgHeroPortrait.sprite = h.portraitSprite;
+                }
+
+                if (portraitLockOverlayGO != null) portraitLockOverlayGO.SetActive(false);
+            }
+            else
+            {
+                if (txtHeroName != null)
+                {
+                    txtHeroName.text = "🔒 " + h.heroName + " <size=14><color=#FF6666>[CHƯA MỞ KHÓA]</color></size>";
+                    txtHeroName.color = new Color(0.95f, 0.6f, 0.4f);
+                }
+                if (txtHeroWeapon != null)
+                {
+                    txtHeroWeapon.text = "Vũ khí khởi đầu: " + h.weaponName + " <color=#FF7777>[BỊ KHÓA]</color>";
+                    txtHeroWeapon.color = new Color(0.85f, 0.65f, 0.7f);
+                }
+                if (txtHeroStats != null)
+                {
+                    txtHeroStats.text = $"Máu: {h.hp}       •   Tốc độ: {h.speed:F1}\nSát thương: +{h.mightPercent}%   •   Giáp: +{h.armor}";
+                }
+                if (txtHeroPassive != null)
+                {
+                    txtHeroPassive.text = $"<color=#FFD700><b>🔒 ĐIỀU KIỆN MỞ KHÓA ({h.unlockTip.ToUpper()}):</b></color>\n{h.unlockConditionText}\n<b>Tiến độ hiện tại:</b> <color=#55FF88>{h.GetProgressText()}</color>";
+                }
+
+                if (imgHeroPortrait != null)
+                {
+                    imgHeroPortrait.color = new Color(0.18f, 0.18f, 0.24f, 1f); // Dark silhouette
+                    if (h.portraitSprite != null) imgHeroPortrait.sprite = h.portraitSprite;
+                }
+
+                if (portraitLockOverlayGO != null) portraitLockOverlayGO.SetActive(true);
+            }
+
+            // Update Confirm / Purchase button state
+            if (heroConfirmOverlayGO != null)
+            {
+                if (unlocked)
+                {
+                    heroConfirmOverlayGO.SetActive(false);
+                }
+                else
+                {
+                    heroConfirmOverlayGO.SetActive(true);
+                    if (h.purchasePrice > 0)
+                    {
+                        int pGold = (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null) ? VampireSurvivors.Data.SaveManager.Instance.Data.gold : 0;
+                        if (sprHeroBuy != null)
+                        {
+                            if (imgHeroConfirmOverlayBg != null)
+                            {
+                                imgHeroConfirmOverlayBg.sprite = sprHeroBuy;
+                                imgHeroConfirmOverlayBg.color = (pGold >= h.purchasePrice) ? Color.white : new Color(0.65f, 0.45f, 0.45f, 0.95f);
+                            }
+                            if (outlineHeroConfirmOverlay != null) outlineHeroConfirmOverlay.enabled = false;
+                            if (txtHeroConfirmOverlay != null)
+                            {
+                                txtHeroConfirmOverlay.text = (pGold >= h.purchasePrice) ? "" : $"đŸ”’ Cáº¦N {h.purchasePrice:N0} đŸª™";
+                                txtHeroConfirmOverlay.color = new Color(1f, 0.75f, 0.75f);
+                            }
+                        }
+                        else
+                        {
+                            if (imgHeroConfirmOverlayBg != null) imgHeroConfirmOverlayBg.color = (pGold >= h.purchasePrice) ? new Color(0.38f, 0.22f, 0.04f, 0.98f) : new Color(0.24f, 0.10f, 0.10f, 0.98f);
+                            if (outlineHeroConfirmOverlay != null)
+                            {
+                                outlineHeroConfirmOverlay.enabled = true;
+                                outlineHeroConfirmOverlay.effectColor = (pGold >= h.purchasePrice) ? new Color(1f, 0.88f, 0.25f, 1f) : new Color(0.7f, 0.3f, 0.3f, 1f);
+                            }
+                            if (txtHeroConfirmOverlay != null)
+                            {
+                                txtHeroConfirmOverlay.text = (pGold >= h.purchasePrice) ? $"đŸ’° MUA: {h.purchasePrice:N0} đŸª™" : $"đŸ”’ Cáº¦N {h.purchasePrice:N0} đŸª™";
+                                txtHeroConfirmOverlay.color = (pGold >= h.purchasePrice) ? new Color(1f, 0.95f, 0.45f) : new Color(0.95f, 0.65f, 0.65f);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (sprHeroLocked != null)
+                        {
+                            if (imgHeroConfirmOverlayBg != null)
+                            {
+                                imgHeroConfirmOverlayBg.sprite = sprHeroLocked;
+                                imgHeroConfirmOverlayBg.color = Color.white;
+                            }
+                            if (outlineHeroConfirmOverlay != null) outlineHeroConfirmOverlay.enabled = false;
+                            if (txtHeroConfirmOverlay != null) txtHeroConfirmOverlay.text = "";
+                        }
+                        else
+                        {
+                            if (imgHeroConfirmOverlayBg != null) imgHeroConfirmOverlayBg.color = new Color(0.12f, 0.12f, 0.16f, 0.98f);
+                            if (outlineHeroConfirmOverlay != null)
+                            {
+                                outlineHeroConfirmOverlay.enabled = true;
+                                outlineHeroConfirmOverlay.effectColor = new Color(0.5f, 0.5f, 0.6f, 1f);
+                            }
+                            if (txtHeroConfirmOverlay != null)
+                            {
+                                txtHeroConfirmOverlay.text = "đŸ”’ Bá» KHĂ“A";
+                                txtHeroConfirmOverlay.color = new Color(0.8f, 0.75f, 0.75f);
+                            }
+                        }
+                    }
+                }
             }
 
             for (int i = 0; i < heroSlotIndicators.Count; i++)
@@ -1242,6 +1612,124 @@ namespace VampireSurvivors.UI
                 {
                     heroSlotButtons[i].transform.localScale = isSelected ? new Vector3(1.12f, 1.12f, 1f) : Vector3.one;
                 }
+
+                bool slotUnlocked = IsHeroUnlocked(heroes[i].heroKey);
+                if (i < heroSlotIcons.Count && heroSlotIcons[i] != null)
+                {
+                    heroSlotIcons[i].color = slotUnlocked ? Color.white : new Color(0.25f, 0.25f, 0.35f, 0.95f);
+                }
+                if (i < heroSlotLocks.Count && heroSlotLocks[i] != null)
+                {
+                    heroSlotLocks[i].SetActive(!slotUnlocked);
+                }
+            }
+        }
+
+        private void OnConfirmHeroClicked()
+        {
+            if (selectedHeroIndex < 0 || selectedHeroIndex >= heroes.Count) return;
+            HeroData h = heroes[selectedHeroIndex];
+
+            // 1. If hero is unlocked, select and close modal
+            if (IsHeroUnlocked(h.heroKey))
+            {
+                PlayerPrefs.SetInt("SelectedHeroIndex", selectedHeroIndex);
+                PlayerPrefs.Save();
+
+                if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("click");
+                OpenHeroSelect(false);
+                return;
+            }
+
+            // 2. If hero is purchasable with gold (e.g. Aeris)
+            if (h.purchasePrice > 0)
+            {
+                int pGold = (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null) ? VampireSurvivors.Data.SaveManager.Instance.Data.gold : 0;
+                if (pGold >= h.purchasePrice)
+                {
+                    bool success = VampireSurvivors.Data.SaveManager.Instance.PurchaseHero(h.heroKey, h.purchasePrice);
+                    if (success)
+                    {
+                        if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("pickup");
+                        if (heroConfirmBtnGO != null)
+                        {
+                            UIButtonJuice bj = heroConfirmBtnGO.GetComponent<UIButtonJuice>();
+                            if (bj != null) bj.Punch(1.22f);
+                        }
+                        if (portraitBoxGO != null)
+                        {
+                            UIButtonJuice pj = portraitBoxGO.GetComponent<UIButtonJuice>();
+                            if (pj != null) pj.Punch(1.15f);
+                        }
+
+                        PlayerPrefs.SetInt("SelectedHeroIndex", selectedHeroIndex);
+                        PlayerPrefs.Save();
+
+                        if (warningToastCoroutine != null) StopCoroutine(warningToastCoroutine);
+                        warningToastCoroutine = StartCoroutine(ShowHeroPurchasedToast(h));
+                        UpdateHeroDisplay();
+                        return;
+                    }
+                }
+                else
+                {
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("gameover");
+                    if (heroConfirmBtnGO != null)
+                    {
+                        UIButtonJuice bj = heroConfirmBtnGO.GetComponent<UIButtonJuice>();
+                        if (bj != null) bj.Punch(1.12f);
+                    }
+                    if (warningToastCoroutine != null) StopCoroutine(warningToastCoroutine);
+                    warningToastCoroutine = StartCoroutine(ShowNotEnoughGoldToast(h, h.purchasePrice - pGold));
+                    return;
+                }
+            }
+
+            // 3. Challenge hero (Valen, Aurelius)
+            if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("gameover");
+            if (infoBoxGO != null)
+            {
+                UIButtonJuice ij = infoBoxGO.GetComponent<UIButtonJuice>();
+                if (ij != null) ij.Punch(1.12f);
+            }
+            if (warningToastCoroutine != null) StopCoroutine(warningToastCoroutine);
+            warningToastCoroutine = StartCoroutine(ShowLockedHeroWarning());
+        }
+
+        private IEnumerator ShowHeroPurchasedToast(HeroData h)
+        {
+            if (txtHeroPassive == null) yield break;
+            txtHeroPassive.text = $"<color=#FFE066><b>🎉 CHIÊU MỘ THÀNH CÔNG!</b></color>\n<color=#FFFFFF>Đã mở khóa vĩnh viễn <b>{h.heroName}</b>!</color>\n<color=#66FF88>Nhấn XÁC NHẬN lần nữa để ra trận ngay.</color>";
+            yield return new WaitForSecondsRealtime(2.8f);
+            if (txtHeroPassive != null && selectedHeroIndex < heroes.Count)
+            {
+                UpdateHeroDisplay();
+            }
+        }
+
+        private IEnumerator ShowNotEnoughGoldToast(HeroData h, int missing)
+        {
+            if (txtHeroPassive == null) yield break;
+            txtHeroPassive.text = $"<color=#FF4444><b>⚠️ BẠN KHÔNG ĐỦ VÀNG!</b></color>\n<color=#FFFFFF>Giá chiêu mộ: <b>{h.purchasePrice:N0} Vàng</b>.</color>\n<color=#FFCC44>Kho quỹ còn thiếu: <b>{missing:N0} Vàng</b>. Hãy chiến đấu để kiếm thêm!</color>";
+            yield return new WaitForSecondsRealtime(2.8f);
+            if (txtHeroPassive != null && selectedHeroIndex < heroes.Count)
+            {
+                UpdateHeroDisplay();
+            }
+        }
+
+        private IEnumerator ShowLockedHeroWarning()
+        {
+            if (txtHeroPassive == null || selectedHeroIndex >= heroes.Count) yield break;
+            HeroData h = heroes[selectedHeroIndex];
+
+            txtHeroPassive.text = $"<color=#FF3333><b>⚠️ ANH HÙNG NÀY ĐANG BỊ KHÓA!</b></color>\n<color=#FFFFFF>Bạn không thể chọn tướng này khi chưa hoàn thành thử thách:</color>\n<color=#FFD700>{h.unlockConditionText}</color>";
+
+            yield return new WaitForSecondsRealtime(2.4f);
+
+            if (txtHeroPassive != null && selectedHeroIndex < heroes.Count)
+            {
+                UpdateHeroDisplay();
             }
         }
 
@@ -1307,11 +1795,21 @@ namespace VampireSurvivors.UI
         {
             if (open)
             {
+                if (VampireSurvivors.Data.SaveManager.Instance != null)
+                {
+                    VampireSurvivors.Data.SaveManager.Instance.CheckHeroUnlocks();
+                }
                 UpdateHeroDisplay();
                 AnimateModalOpen(heroSelectModal, heroFrameRect);
             }
             else
             {
+                if (selectedHeroIndex >= 0 && selectedHeroIndex < heroes.Count && !IsHeroUnlocked(heroes[selectedHeroIndex].heroKey))
+                {
+                    selectedHeroIndex = Mathf.Clamp(PlayerPrefs.GetInt("SelectedHeroIndex", 0), 0, heroes.Count - 1);
+                    if (!IsHeroUnlocked(heroes[selectedHeroIndex].heroKey)) selectedHeroIndex = 0;
+                    UpdateHeroDisplay();
+                }
                 AnimateModalClose(heroSelectModal, heroFrameRect);
             }
             if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("click");
@@ -1446,10 +1944,20 @@ namespace VampireSurvivors.UI
             var env = bg.GetComponent<VampireSurvivors.Environment.MapEnvironmentManager>();
             if (env == null) env = bg.AddComponent<VampireSurvivors.Environment.MapEnvironmentManager>();
             env.ApplyMapIndex(selectedMapIndex, mapSpr);
+
+            // Update monster colors to match the selected map without altering wave or spawn logic
+            Enemies.EnemyStats.RefreshAllEnemyColors();
         }
 
         public void StartBattle()
         {
+            if (selectedHeroIndex < 0 || selectedHeroIndex >= heroes.Count || !IsHeroUnlocked(heroes[selectedHeroIndex].heroKey))
+            {
+                selectedHeroIndex = 0; // Default to Sir Roland
+                PlayerPrefs.SetInt("SelectedHeroIndex", 0);
+                PlayerPrefs.Save();
+            }
+
             Debug.Log($"<color=green>[START BATTLE]</color> Hero: {heroes[selectedHeroIndex].heroName}, Map: {maps[selectedMapIndex].mapName}");
 
             if (AudioManager.Instance != null)
@@ -1461,6 +1969,14 @@ namespace VampireSurvivors.UI
             if (player != null && selectedHeroIndex < heroes.Count)
             {
                 player.SwitchHero(heroes[selectedHeroIndex].heroKey);
+                player.transform.position = Vector3.zero;
+            }
+
+            if (selectedMapIndex < maps.Count)
+            {
+                PlayerPrefs.SetFloat("SelectedMapGoldBonus", maps[selectedMapIndex].goldBonusValue);
+                PlayerPrefs.SetInt("SelectedMapIndex", selectedMapIndex);
+                PlayerPrefs.Save();
             }
 
             ApplySelectedMapToEnvironment();
@@ -1472,13 +1988,6 @@ namespace VampireSurvivors.UI
 
             isMenuOpen = false;
             Time.timeScale = 1f;
-
-            if (selectedMapIndex < maps.Count)
-            {
-                PlayerPrefs.SetFloat("SelectedMapGoldBonus", maps[selectedMapIndex].goldBonusValue);
-                PlayerPrefs.SetInt("SelectedMapIndex", selectedMapIndex);
-                PlayerPrefs.Save();
-            }
 
             if (GameManager.Instance != null)
             {

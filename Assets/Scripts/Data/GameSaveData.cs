@@ -8,6 +8,7 @@ namespace VampireSurvivors.Data
     {
         // Currency
         public int gold = 0;
+        public int lifetimeGoldEarned = 0;
 
         // Statistics
         public int lifetimeKills = 0;
@@ -15,10 +16,22 @@ namespace VampireSurvivors.Data
         public float lifetimeSurvivalSeconds = 0f;
         public float bestSurvivalSeconds = 0f;
         public int highestLevelReached = 1;
+        public int lifetimeBossKills = 0;
 
-        // Selected & Unlocked Heroes
-        public string selectedHero = "Archer";
-        public List<string> unlockedHeroes = new List<string>() { "Knight", "Archer", "Mage" };
+        // Bestiary Species Kill Counts (UC-04 Grimoire)
+        public int slimeKills = 0;
+        public int batKills = 0;
+        public int skeletonKills = 0;
+        public int goblinKills = 0;
+        public int plantKills = 0;
+
+        // Discovered Evolved Weapons (UC-04 Grimoire)
+        public List<string> discoveredEvolutions = new List<string>();
+
+        // Selected & Unlocked Heroes (Starters: Knight, Mage, Ranger)
+        public string selectedHero = "Knight";
+        public List<string> unlockedHeroes = new List<string>() { "Knight", "Mage", "Ranger" };
+        public List<string> purchasedHeroes = new List<string>();
 
         // Meta-Progression Upgrade Levels (UpgradeID -> Level)
         // Supported: Vigor, IronSkin, Agility, Might, Quickness, Magnetism, Bounty, Scholar, CriticalStrike, VitalityRegen, SecondWind, Reroll
