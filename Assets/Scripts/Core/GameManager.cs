@@ -38,6 +38,11 @@ namespace VampireSurvivors.Core
         private void Start()
         {
             Time.timeScale = 1f;
+            if (Environment.Hazards.MapHazardManager.Instance == null && FindAnyObjectByType<Environment.Hazards.MapHazardManager>() == null)
+            {
+                GameObject hmGO = new GameObject("MapHazardManager");
+                hmGO.AddComponent<Environment.Hazards.MapHazardManager>();
+            }
 
             if (enemyPrefab == null)
             {
@@ -53,14 +58,14 @@ namespace VampireSurvivors.Core
             }
 
             // Ensure WaveManager exists
-            if (WaveManager.Instance == null && FindObjectOfType<WaveManager>() == null)
+            if (WaveManager.Instance == null && FindAnyObjectByType<WaveManager>() == null)
             {
                 GameObject wmGO = new GameObject("WaveManager");
                 wmGO.AddComponent<WaveManager>();
             }
 
             // Ensure DamageNumberPool exists
-            if (DamageNumberPool.Instance == null && FindObjectOfType<DamageNumberPool>() == null)
+            if (DamageNumberPool.Instance == null && FindAnyObjectByType<DamageNumberPool>() == null)
             {
                 GameObject poolGO = new GameObject("DamageNumberPool");
                 poolGO.AddComponent<DamageNumberPool>();
@@ -73,24 +78,29 @@ namespace VampireSurvivors.Core
             }
 
             // Ensure AudioManager exists
-            if (Audio.AudioManager.Instance == null && FindObjectOfType<Audio.AudioManager>() == null)
+            if (Audio.AudioManager.Instance == null && FindAnyObjectByType<Audio.AudioManager>() == null)
             {
                 GameObject audioGO = new GameObject("AudioManager");
                 audioGO.AddComponent<Audio.AudioManager>();
             }
 
             // Ensure MainMenuManager exists
-            if (MainMenuManager.Instance == null && FindObjectOfType<MainMenuManager>() == null)
+            if (MainMenuManager.Instance == null && FindAnyObjectByType<MainMenuManager>() == null)
             {
                 GameObject menuGO = new GameObject("MainMenuManager");
                 menuGO.AddComponent<MainMenuManager>();
             }
 
             // Ensure UIManager exists
-            if (UIManager.Instance == null && FindObjectOfType<UIManager>() == null)
+            if (UIManager.Instance == null && FindAnyObjectByType<UIManager>() == null)
             {
                 GameObject uiGO = new GameObject("UIManager");
                 uiGO.AddComponent<UIManager>();
+                if (Environment.Hazards.MapHazardManager.Instance == null && FindAnyObjectByType<Environment.Hazards.MapHazardManager>() == null)
+                {
+                    GameObject hmGO = new GameObject("MapHazardManager");
+                    hmGO.AddComponent<Environment.Hazards.MapHazardManager>();
+                }
             }
         }
 
@@ -101,11 +111,33 @@ namespace VampireSurvivors.Core
 
             survivalTime += Time.deltaTime;
 
+            // Player press ESC during active battle -> gracefully retreat & bank all collected gold
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if ((UI.LevelUpUI.Instance == null || UI.LevelUpUI.Instance.panel == null || !UI.LevelUpUI.Instance.panel.activeSelf) &&
+                    (UI.AchievementUI.Instance == null || UI.AchievementUI.Instance.panel == null || !UI.AchievementUI.Instance.panel.activeSelf) &&
+                    (UI.ShopUI.Instance == null || UI.ShopUI.Instance.panel == null || !UI.ShopUI.Instance.panel.activeSelf))
+                {
+                    Debug.Log("<color=yellow>[BATTLE RETREAT]</color> Ending run via ESC key to bank all collected gold!");
+                    GameOver();
+                }
+            }
+
+            // Live milestone check for 10-minute Survival Challenge (Valen Unlock)
+            if (survivalTime >= 600f && VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
+            {
+                if (survivalTime > VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSeconds)
+                {
+                    VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSeconds = survivalTime;
+                    VampireSurvivors.Data.SaveManager.Instance.CheckHeroUnlocks();
+                }
+            }
+
             // Developer Testing Hotkeys:
             // Press U: Instantly level up and test LevelUp cards + recipe hints
             if (Input.GetKeyDown(KeyCode.U))
             {
-                var stats = playerTransform != null ? playerTransform.GetComponent<PlayerStats>() : FindObjectOfType<PlayerStats>();
+                var stats = playerTransform != null ? playerTransform.GetComponent<PlayerStats>() : FindAnyObjectByType<PlayerStats>();
                 if (stats != null)
                 {
                     Debug.Log("<color=yellow>[DEV TEST]</color> Level Up triggered via Key [U]!");

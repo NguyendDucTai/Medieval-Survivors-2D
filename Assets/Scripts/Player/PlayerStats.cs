@@ -45,6 +45,7 @@ namespace VampireSurvivors.Player
         public event Action OnPlayerRevived;
 
         private bool isInvulnerable = false;
+        private bool metaUpgradesApplied = false;
         private SpriteRenderer spriteRenderer;
         private float lastDamageTime = -10f;
         public float damageCooldown = 0.25f; // Brief invulnerability window (i-frame)
@@ -60,14 +61,18 @@ namespace VampireSurvivors.Player
 
         private void OnDestroy()
         {
+            BankGoldToVault();
             if (Instance == this) Instance = null;
         }
 
         private void Start()
         {
-            ApplyMetaUpgrades();
+            if (!metaUpgradesApplied)
+            {
+                ApplyMetaUpgrades();
+                currentHealth = maxHealth;
+            }
 
-            currentHealth = maxHealth;
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
             OnExpChanged?.Invoke(currentExp, expToNextLevel);
             OnGoldChanged?.Invoke(inRunGold);
@@ -84,6 +89,7 @@ namespace VampireSurvivors.Player
 
         public void ApplyMetaUpgrades()
         {
+            metaUpgradesApplied = true;
             if (UpgradeManager.Instance == null) return;
 
             maxHealth += UpgradeManager.Instance.GetMaxHealthBonus();
@@ -99,6 +105,26 @@ namespace VampireSurvivors.Player
             reviveCount += UpgradeManager.Instance.GetReviveCount();
 
             Debug.Log($"<color=cyan>[PlayerStats Initialized]</color> HP:{maxHealth:F0} | Armor:{armor:F0} | Speed:{moveSpeed:F1} | DmgMult:{damageMultiplier:F2} | Revives:{reviveCount}");
+        }
+
+        public void ConfigureHeroBaseStats(float baseHp, float baseSpeed, float baseMightPercent, float baseArmor)
+        {
+            maxHealth = baseHp;
+            moveSpeed = baseSpeed;
+            damageMultiplier = 1.0f + (baseMightPercent / 100f);
+            armor = baseArmor;
+            pickupRadius = 3f;
+            cooldownReduction = 0f;
+            critChance = 0.05f;
+            critMultiplier = 2.0f;
+            goldMultiplier = 1.0f;
+            expMultiplier = 1.0f;
+            hpRegen = 0f;
+            reviveCount = 0;
+
+            ApplyMetaUpgrades();
+            currentHealth = maxHealth;
+            OnHealthChanged?.Invoke(currentHealth, maxHealth);
         }
 
         public void TakeDamage(float amount)
@@ -160,17 +186,16 @@ namespace VampireSurvivors.Player
 
             Debug.Log($"<color=yellow>[SECOND WIND!]</color> Player revived with 50% HP! Remaining revives: {reviveCount}");
 
-            // Push back nearby enemies
-            Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, 6f);
+            // Holy Nova burst damage on revive (no knockback to keep enemy movement clean)
+            Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, 5f);
             foreach (var col in nearby)
             {
                 if (col.CompareTag("Enemy"))
                 {
-                    var rb = col.GetComponent<Rigidbody2D>();
-                    if (rb != null)
+                    var enemyStats = col.GetComponent<Enemies.EnemyStats>();
+                    if (enemyStats != null && !enemyStats.isBoss)
                     {
-                        Vector2 pushDir = (col.transform.position - transform.position).normalized;
-                        rb.AddForce(pushDir * 15f, ForceMode2D.Impulse);
+                        enemyStats.TakeDamage(50f, true);
                     }
                 }
             }
@@ -220,11 +245,30 @@ namespace VampireSurvivors.Player
             OnExpChanged?.Invoke(currentExp, expToNextLevel);
         }
 
+        private bool hasBankedGold = false;
+        public bool HasBankedGold => hasBankedGold;
+
         public void AddGold(int amount)
         {
             int actualGold = Mathf.Max(1, Mathf.RoundToInt(amount * goldMultiplier));
             inRunGold += actualGold;
             OnGoldChanged?.Invoke(inRunGold);
+        }
+
+        public void BankGoldToVault()
+        {
+            if (hasBankedGold) return;
+            hasBankedGold = true;
+            if (inRunGold > 0 && VampireSurvivors.Data.SaveManager.Instance != null)
+            {
+                VampireSurvivors.Data.SaveManager.Instance.AddGold(inRunGold);
+                Debug.Log($"<color=yellow>[VAULT DEPOSIT]</color> Successfully deposited {inRunGold} gold into Quỹ Vàng!");
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            BankGoldToVault();
         }
 
         public void RecordEnemyKill(float damage)
@@ -239,7 +283,7 @@ namespace VampireSurvivors.Player
             expToNextLevel = Mathf.Round(expToNextLevel * 1.25f);
             OnLevelUp?.Invoke(currentLevel);
 
-            if (UI.LevelUpUI.Instance != null)
+            if (UI.UIManager.Instance == null && UI.LevelUpUI.Instance != null)
             {
                 UI.LevelUpUI.Instance.OpenLevelUp();
             }
@@ -252,6 +296,7 @@ namespace VampireSurvivors.Player
 
         private void Die()
         {
+            BankGoldToVault();
             OnPlayerDeath?.Invoke();
             Debug.Log("Player has died!");
 

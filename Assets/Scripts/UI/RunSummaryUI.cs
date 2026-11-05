@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,6 +25,7 @@ namespace VampireSurvivors.UI
         public Text damageText;
         public Text runGoldText;
         public Text bankGoldText;
+        public Text unlockHeroText;
 
         [Header("Buttons")]
         public Button playAgainButton;
@@ -63,11 +65,17 @@ namespace VampireSurvivors.UI
             int kills = player != null ? player.inRunKills : 0;
             float damage = player != null ? player.inRunDamageDealt : 0f;
             int runGold = player != null ? player.inRunGold : 0;
+            bool wasBanked = player != null && player.HasBankedGold;
+            if (!wasBanked && player != null)
+            {
+                player.BankGoldToVault();
+                wasBanked = true;
+            }
 
             // Save to persistent storage
             if (SaveManager.Instance != null)
             {
-                SaveManager.Instance.RecordRunEnd(time, level, kills, runGold);
+                SaveManager.Instance.RecordRunEnd(time, level, kills, runGold, wasBanked);
             }
 
             // Check survival achievements
@@ -93,6 +101,29 @@ namespace VampireSurvivors.UI
 
             int totalBankGold = (SaveManager.Instance != null && SaveManager.Instance.Data != null) ? SaveManager.Instance.Data.gold : runGold;
             if (bankGoldText != null) bankGoldText.text = $"🏦 Tổng Quỹ Vàng: <color=#FFCC00>{totalBankGold:N0} Vàng</color>";
+
+            // Newly unlocked hero highlight
+            if (unlockHeroText != null)
+            {
+                if (SaveManager.Instance != null && SaveManager.Instance.recentUnlocks.Count > 0)
+                {
+                    List<string> formattedNames = new List<string>();
+                    foreach (var h in SaveManager.Instance.recentUnlocks)
+                    {
+                        if (h == "ShadowKnight") formattedNames.Add("Valen (Sát Thủ Bóng Đêm)");
+                        else if (h == "Archmage") formattedNames.Add("Aurelius (Đại Pháp Sư Sét)");
+                        else if (h == "Archer") formattedNames.Add("Aeris (Xạ Thủ Thần Phong)");
+                        else formattedNames.Add(h);
+                    }
+                    unlockHeroText.gameObject.SetActive(true);
+                    unlockHeroText.text = $"🎉 <color=#FFE066><b>MỞ KHÓA TƯỚNG MỚI:</b> {string.Join(", ", formattedNames)}!</color>";
+                    SaveManager.Instance.recentUnlocks.Clear();
+                }
+                else
+                {
+                    unlockHeroText.gameObject.SetActive(false);
+                }
+            }
 
             panel.SetActive(true);
             Time.timeScale = 0f; // Pause game
@@ -140,20 +171,13 @@ namespace VampireSurvivors.UI
 
         public void OpenAchievements()
         {
-            Time.timeScale = 1f;
             if (Audio.AudioManager.Instance != null)
             {
                 Audio.AudioManager.Instance.PlaySfxByName("click");
             }
 
-            if (AchievementUI.Instance != null)
-            {
-                AchievementUI.Instance.OpenAchievements();
-            }
-            else
-            {
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-            }
+            if (panel != null) panel.SetActive(false);
+            AchievementUI.GetOrCreate().OpenAchievements();
         }
 
         // =========================================================
@@ -266,7 +290,7 @@ namespace VampireSurvivors.UI
             statsBoxRT.anchorMax = new Vector2(0.5f, 0.5f);
             statsBoxRT.pivot = new Vector2(0.5f, 0.5f);
             statsBoxRT.anchoredPosition = new Vector2(0f, 25f);
-            statsBoxRT.sizeDelta = new Vector2(680f, 400f);
+            statsBoxRT.sizeDelta = new Vector2(680f, 435f);
 
             Image statsBg = statsBoxGO.AddComponent<Image>();
             statsBg.color = new Color(0.06f, 0.08f, 0.10f, 0.92f);
@@ -274,13 +298,14 @@ namespace VampireSurvivors.UI
             statsOutline.effectColor = new Color(0.35f, 0.45f, 0.6f, 0.8f);
             statsOutline.effectDistance = new Vector2(2f, -2f);
 
-            // 6 Stat Labels
+            // Stat Labels + Hero Unlock Highlight
             survivalTimeText = CreateStatLine(statsBoxGO.transform, "Stat_Time", "⏱️ Thời Gian Sinh Tồn: 00:00", 0, font);
             levelText = CreateStatLine(statsBoxGO.transform, "Stat_Level", "🎖️ Cấp Độ Đạt Được: Lv 1", 1, font);
             killsText = CreateStatLine(statsBoxGO.transform, "Stat_Kills", "💀 Quái Vật Hạ Gục: 0 con", 2, font);
             damageText = CreateStatLine(statsBoxGO.transform, "Stat_Damage", "💥 Tổng Sát Thương: 0", 3, font);
             runGoldText = CreateStatLine(statsBoxGO.transform, "Stat_RunGold", "💰 Vàng Thu Thập: +0 Vàng", 4, font);
             bankGoldText = CreateStatLine(statsBoxGO.transform, "Stat_BankGold", "🏦 Tổng Quỹ Vàng: 0 Vàng", 5, font);
+            unlockHeroText = CreateStatLine(statsBoxGO.transform, "Stat_Unlock", "", 6, font);
 
             // Buttons Container
             GameObject btnRow = new GameObject("ButtonRow");
@@ -293,7 +318,7 @@ namespace VampireSurvivors.UI
             btnRowRT.sizeDelta = new Vector2(720f, 75f);
 
             HorizontalLayoutGroup hlg = btnRow.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 20f;
+            hlg.spacing = 12f;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
@@ -306,6 +331,9 @@ namespace VampireSurvivors.UI
 
             // Button 3: Nâng Cấp (Upgrades Shop)
             shopButton = CreateButton(btnRow.transform, "Btn_Shop", "NÂNG CẤP SHOP", new Color(0.2f, 0.65f, 0.45f), Color.white, font, OpenShop);
+
+            // Button 4: Cổ Thư (Grimoire & Achievements)
+            achievementsButton = CreateButton(btnRow.transform, "Btn_Grimoire", "📖 CỔ THƯ", new Color(0.45f, 0.25f, 0.62f), Color.white, font, OpenAchievements);
 
             panel.SetActive(false);
         }
@@ -342,7 +370,7 @@ namespace VampireSurvivors.UI
             GameObject btnGO = new GameObject(name, typeof(RectTransform));
             btnGO.transform.SetParent(parent, false);
             RectTransform rt = btnGO.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(215f, 60f);
+            rt.sizeDelta = new Vector2(168f, 58f);
 
             Image img = btnGO.AddComponent<Image>();
             img.color = bgColor;
