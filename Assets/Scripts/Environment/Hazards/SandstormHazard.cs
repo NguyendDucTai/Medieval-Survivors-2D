@@ -133,6 +133,10 @@ namespace VampireSurvivors.Environment.Hazards
                     break;
             }
 
+            float hazMult = Core.DifficultyManager.GetHazardMultiplier();
+            stormInterval = Mathf.Max(18f, stormInterval / hazMult);
+            windPushSpeed *= hazMult;
+
             if (currentStage > lastAnnouncedStage)
             {
                 lastAnnouncedStage = currentStage;

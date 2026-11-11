@@ -45,13 +45,17 @@ namespace VampireSurvivors.Environment.Hazards
             CleanupNulls();
 
             timer += deltaTime;
-            if (!firstWaveSpawned && timer >= firstSpawnDelay)
+            float hazMult = Core.DifficultyManager.GetHazardMultiplier();
+            float effectiveFirstDelay = firstSpawnDelay / hazMult;
+            float effectiveInterval = spawnInterval / hazMult;
+
+            if (!firstWaveSpawned && timer >= effectiveFirstDelay)
             {
                 firstWaveSpawned = true;
                 timer = 0f;
                 SpawnBushCluster(playerTransform.position);
             }
-            else if (firstWaveSpawned && timer >= spawnInterval)
+            else if (firstWaveSpawned && timer >= effectiveInterval)
             {
                 timer = 0f;
                 SpawnBushCluster(playerTransform.position);
@@ -159,7 +163,8 @@ namespace VampireSurvivors.Environment.Hazards
             col.radius = 0.58f;
 
             AncientBush bush = go.AddComponent<AncientBush>();
-            bush.Initialize(this, 30f, bushLifetime);
+            float bushHp = 30f * Core.DifficultyManager.GetHazardMultiplier();
+            bush.Initialize(this, bushHp, bushLifetime);
             return bush;
         }
 

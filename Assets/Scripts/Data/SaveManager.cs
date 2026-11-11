@@ -113,12 +113,12 @@ namespace VampireSurvivors.Data
             }
 
             // Continuous lock integrity: ensure non-starter heroes aren't unlocked prematurely
-            if (Data.bestSurvivalSeconds < 600f)
+            if (Data.bestSurvivalSecondsMediumOrHard < 600f)
             {
                 Data.unlockedHeroes.Remove("ShadowKnight");
                 Data.unlockedHeroes.Remove("Rogue");
             }
-            if (Data.lifetimeBossKills < 5)
+            if (Data.hardGolemKills < 1)
             {
                 Data.unlockedHeroes.Remove("Archmage");
             }
@@ -128,6 +128,8 @@ namespace VampireSurvivors.Data
             {
                 Data.unlockedHeroes.Remove("Archer");
             }
+
+            Save();
 
             // In case criteria were achieved, unlock them
             CheckHeroUnlocks();
@@ -170,6 +172,14 @@ namespace VampireSurvivors.Data
         {
             if (Data == null) Load();
             Data.lifetimeBossKills++;
+            Save();
+            CheckHeroUnlocks();
+        }
+
+        public void RecordHardGolemKill()
+        {
+            if (Data == null) Load();
+            Data.hardGolemKills++;
             Save();
             CheckHeroUnlocks();
         }
@@ -261,6 +271,15 @@ namespace VampireSurvivors.Data
                 Data.bestSurvivalSeconds = survivalTime;
             }
 
+            var currentDiff = Core.DifficultyManager.GetCurrentDifficulty();
+            if (currentDiff == Core.DifficultyMode.Medium || currentDiff == Core.DifficultyMode.Hard)
+            {
+                if (survivalTime > Data.bestSurvivalSecondsMediumOrHard)
+                {
+                    Data.bestSurvivalSecondsMediumOrHard = survivalTime;
+                }
+            }
+
             if (level > Data.highestLevelReached)
             {
                 Data.highestLevelReached = level;
@@ -313,15 +332,15 @@ namespace VampireSurvivors.Data
             if (Data == null) Load();
             List<string> newlyUnlocked = new List<string>();
 
-            // 1. Valen (ShadowKnight): Sống sót tối thiểu 10 phút (600 giây)
-            if (!IsHeroUnlocked("ShadowKnight") && Data.bestSurvivalSeconds >= 600f)
+            // 1. Valen (ShadowKnight): Sống sót tối thiểu 10 phút (600 giây) ở chế độ MEDIUM trở lên
+            if (!IsHeroUnlocked("ShadowKnight") && Data.bestSurvivalSecondsMediumOrHard >= 600f)
             {
                 UnlockHero("ShadowKnight");
                 newlyUnlocked.Add("ShadowKnight");
             }
 
-            // 2. Aurelius (Archmage): Tiêu diệt tổng cộng 5 Đại Trùm (Boss)
-            if (!IsHeroUnlocked("Archmage") && Data.lifetimeBossKills >= 5)
+            // 2. Aurelius (Archmage): Tiêu diệt Đại Trùm Colossal Stone Golem ở chế độ HARD
+            if (!IsHeroUnlocked("Archmage") && Data.hardGolemKills >= 1)
             {
                 UnlockHero("Archmage");
                 newlyUnlocked.Add("Archmage");

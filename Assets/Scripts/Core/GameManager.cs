@@ -33,6 +33,11 @@ namespace VampireSurvivors.Core
             if (SaveManager.Instance == null) { }
             if (UpgradeManager.Instance == null) { }
             if (AchievementManager.Instance == null) { }
+            if (DifficultyManager.Instance == null && FindAnyObjectByType<DifficultyManager>() == null)
+            {
+                GameObject dmGO = new GameObject("DifficultyManager");
+                dmGO.AddComponent<DifficultyManager>();
+            }
         }
 
         private void Start()
@@ -123,13 +128,20 @@ namespace VampireSurvivors.Core
                 }
             }
 
-            // Live milestone check for 10-minute Survival Challenge (Valen Unlock)
-            if (survivalTime >= 600f && VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
+            // Live milestone check for 10-minute Survival Challenge (Valen Unlock - MEDIUM or HARD)
+            var currentDiff = Core.DifficultyManager.GetCurrentDifficulty();
+            if (currentDiff == Core.DifficultyMode.Medium || currentDiff == Core.DifficultyMode.Hard)
             {
-                if (survivalTime > VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSeconds)
+                if (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
                 {
-                    VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSeconds = survivalTime;
-                    VampireSurvivors.Data.SaveManager.Instance.CheckHeroUnlocks();
+                    if (survivalTime > VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSecondsMediumOrHard)
+                    {
+                        VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSecondsMediumOrHard = survivalTime;
+                        if (survivalTime >= 600f)
+                        {
+                            VampireSurvivors.Data.SaveManager.Instance.CheckHeroUnlocks();
+                        }
+                    }
                 }
             }
 
@@ -250,6 +262,11 @@ namespace VampireSurvivors.Core
             if (isGameOver) return;
             isGameOver = true;
             Debug.Log("Game Over! Total Survival Time: " + survivalTime.ToString("F1") + "s");
+
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.StopBGM();
+            }
 
             RunSummaryUI summary = RunSummaryUI.Instance;
             if (summary == null)

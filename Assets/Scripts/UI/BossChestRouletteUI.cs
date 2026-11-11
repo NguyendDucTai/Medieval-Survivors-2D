@@ -86,9 +86,10 @@ namespace VampireSurvivors.UI
                 }
             }
 
-            // Play Opening SFX
+            // Duck BGM to 35% and play Opening SFX
             if (AudioManager.Instance != null)
             {
+                AudioManager.Instance.SetBgmDucking(true, 0.35f, 0.25f);
                 AudioManager.Instance.PlaySfxByName("levelup");
             }
 
@@ -373,6 +374,7 @@ namespace VampireSurvivors.UI
 
             if (AudioManager.Instance != null)
             {
+                AudioManager.Instance.SetBgmDucking(false, 0.35f, 0.25f);
                 AudioManager.Instance.PlaySfxByName("click");
             }
 

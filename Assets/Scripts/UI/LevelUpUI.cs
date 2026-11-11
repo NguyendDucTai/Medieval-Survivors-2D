@@ -83,9 +83,10 @@ namespace VampireSurvivors.UI
             DisplayOptions();
             UpdateRerollButton();
 
-            // Play level up SFX
+            // Duck BGM to 35% and play level up SFX
             if (Audio.AudioManager.Instance != null)
             {
+                Audio.AudioManager.Instance.SetBgmDucking(true, 0.35f, 0.25f);
                 Audio.AudioManager.Instance.PlaySfxByName("levelup");
             }
         }
@@ -565,6 +566,10 @@ namespace VampireSurvivors.UI
         public void CloseLevelUp()
         {
             if (panel != null) panel.SetActive(false);
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.SetBgmDucking(false, 0.35f, 0.25f);
+            }
             Time.timeScale = 1f; // Resume game
         }
 

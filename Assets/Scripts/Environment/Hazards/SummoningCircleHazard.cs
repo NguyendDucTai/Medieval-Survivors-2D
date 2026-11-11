@@ -44,13 +44,17 @@ namespace VampireSurvivors.Environment.Hazards
             if (activeCircle != null) return; // Max 1 circle at a time
 
             timer += deltaTime;
-            if (!firstSpawned && timer >= firstSpawnDelay)
+            float hazMult = Core.DifficultyManager.GetHazardMultiplier();
+            float effectiveFirstDelay = firstSpawnDelay / hazMult;
+            float effectiveInterval = spawnInterval / hazMult;
+
+            if (!firstSpawned && timer >= effectiveFirstDelay)
             {
                 firstSpawned = true;
                 timer = 0f;
                 SpawnCircle(playerTransform.position);
             }
-            else if (firstSpawned && timer >= spawnInterval)
+            else if (firstSpawned && timer >= effectiveInterval)
             {
                 timer = 0f;
                 SpawnCircle(playerTransform.position);
@@ -245,17 +249,22 @@ namespace VampireSurvivors.Environment.Hazards
                 EnemyStats stats = eliteGO.GetComponent<EnemyStats>();
                 if (stats != null)
                 {
+                    float hpMult = Core.DifficultyManager.GetHealthMultiplier();
+                    float speedMult = Core.DifficultyManager.GetSpeedMultiplier();
+                    float dmgMult = Core.DifficultyManager.GetDamageMultiplier();
+                    float hazMult = Core.DifficultyManager.GetHazardMultiplier();
+
                     stats.enemyName = eliteName;
-                    stats.maxHealth = Mathf.Max(320f, stats.maxHealth * 6f);
+                    stats.maxHealth = Mathf.Max(320f, stats.maxHealth * 6f) * hpMult;
                     stats.currentHealth = stats.maxHealth;
-                    stats.moveSpeed *= 1.15f;
-                    stats.attackDamage = Mathf.Max(18f, stats.attackDamage * 1.4f);
+                    stats.moveSpeed *= 1.15f * speedMult;
+                    stats.attackDamage = Mathf.Max(18f, stats.attackDamage * 1.4f) * dmgMult;
                     stats.expValue = Mathf.Max(120f, stats.expValue * 8f);
                     stats.goldDropChance = 1.0f;
 
                     EliteTreasureDropper dropper = eliteGO.AddComponent<EliteTreasureDropper>();
-                    dropper.goldCoinsToDrop = Random.Range(6, 9);
-                    dropper.bonusExpGems = 5;
+                    dropper.goldCoinsToDrop = Mathf.RoundToInt(Random.Range(6, 9) * hazMult);
+                    dropper.bonusExpGems = Mathf.RoundToInt(5 * hazMult);
                     dropper.expPerBonusGem = 35f;
                     dropper.goldCoinPrefab = stats.goldCoinPrefab != null ? stats.goldCoinPrefab : (wm != null ? wm.goldCoinPrefab : null);
                     dropper.expGemPrefab = stats.expGemPrefab;

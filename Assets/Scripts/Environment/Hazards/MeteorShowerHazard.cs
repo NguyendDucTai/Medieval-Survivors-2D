@@ -130,26 +130,30 @@ namespace VampireSurvivors.Environment.Hazards
 
         private float GetIntervalForStage()
         {
+            float baseInt;
             switch (currentStage)
             {
-                case 1: return 18f;
-                case 2: return 14f;
-                case 3: return 10f;
-                case 4: return 8f;
-                default: return 6f;
+                case 1: baseInt = 18f; break;
+                case 2: baseInt = 14f; break;
+                case 3: baseInt = 10f; break;
+                case 4: baseInt = 8f; break;
+                default: baseInt = 6f; break;
             }
+            return Mathf.Max(3.5f, baseInt / DifficultyManager.GetHazardMultiplier());
         }
 
         private int GetMeteorCountForStage()
         {
+            int baseCount;
             switch (currentStage)
             {
-                case 1: return Random.Range(2, 4);
-                case 2: return Random.Range(4, 6);
-                case 3: return Random.Range(6, 9);
-                case 4: return Random.Range(8, 11);
-                default: return Random.Range(10, 15);
+                case 1: baseCount = Random.Range(2, 4); break;
+                case 2: baseCount = Random.Range(4, 6); break;
+                case 3: baseCount = Random.Range(6, 9); break;
+                case 4: baseCount = Random.Range(8, 11); break;
+                default: baseCount = Random.Range(10, 15); break;
             }
+            return Mathf.Max(2, Mathf.RoundToInt(baseCount * DifficultyManager.GetHazardMultiplier()));
         }
 
         private float GetWarningDurationForStage()
@@ -166,27 +170,29 @@ namespace VampireSurvivors.Environment.Hazards
 
         private float GetPlayerDamageForStage(bool isGiant)
         {
-            if (isGiant) return 38f;
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+            if (isGiant) return 38f * dmgMult;
             switch (currentStage)
             {
-                case 1: return 10f;
-                case 2: return 14f;
-                case 3: return 18f;
-                case 4: return 22f;
-                default: return 26f;
+                case 1: return 10f * dmgMult;
+                case 2: return 14f * dmgMult;
+                case 3: return 18f * dmgMult;
+                case 4: return 22f * dmgMult;
+                default: return 26f * dmgMult;
             }
         }
 
         private float GetEnemyDamageForStage(bool isGiant)
         {
-            if (isGiant) return 110f;
+            float hazMult = DifficultyManager.GetHazardMultiplier();
+            if (isGiant) return 110f * hazMult;
             switch (currentStage)
             {
-                case 1: return 28f;
-                case 2: return 38f;
-                case 3: return 50f;
-                case 4: return 65f;
-                default: return 80f;
+                case 1: return 28f * hazMult;
+                case 2: return 38f * hazMult;
+                case 3: return 50f * hazMult;
+                case 4: return 65f * hazMult;
+                default: return 80f * hazMult;
             }
         }
 

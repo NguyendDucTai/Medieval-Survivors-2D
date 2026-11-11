@@ -151,6 +151,7 @@ namespace VampireSurvivors.UI
             Time.timeScale = 1f;
             if (Audio.AudioManager.Instance != null)
             {
+                Audio.AudioManager.Instance.StopBGM();
                 Audio.AudioManager.Instance.PlaySfxByName("click");
             }
             PlayerPrefs.SetInt("AutoStartBattle", 0);

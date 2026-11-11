@@ -234,6 +234,10 @@ namespace VampireSurvivors.Enemies
                 if (Data.SaveManager.Instance != null)
                 {
                     Data.SaveManager.Instance.RecordBossKill();
+                    if (!string.IsNullOrEmpty(enemyName) && enemyName.Contains("Golem") && Core.DifficultyManager.GetCurrentDifficulty() == Core.DifficultyMode.Hard)
+                    {
+                        Data.SaveManager.Instance.RecordHardGolemKill();
+                    }
                 }
                 if (MetaProgression.AchievementManager.Instance != null && Data.SaveManager.Instance != null && Data.SaveManager.Instance.Data != null)
                 {

@@ -139,6 +139,12 @@ namespace VampireSurvivors.Player
             currentHealth = Mathf.Max(0, currentHealth);
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
+            // Play armored impact hit SFX on player
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayHitSound(true, false);
+            }
+
             // Subtle, crisp screen bump with cooldown to prevent jarring camera spam
             if (Time.time - lastShakeTime > 0.25f)
             {
@@ -235,7 +241,8 @@ namespace VampireSurvivors.Player
         public void AddExperience(float amount)
         {
             if (currentHealth <= 0) return;
-            float actualExp = amount * expMultiplier;
+            float diffExpMult = Core.DifficultyManager.GetExpMultiplier();
+            float actualExp = amount * expMultiplier * diffExpMult;
             currentExp += actualExp;
             while (currentExp >= expToNextLevel)
             {
@@ -250,7 +257,8 @@ namespace VampireSurvivors.Player
 
         public void AddGold(int amount)
         {
-            int actualGold = Mathf.Max(1, Mathf.RoundToInt(amount * goldMultiplier));
+            float diffGoldMult = Core.DifficultyManager.GetGoldMultiplier();
+            int actualGold = Mathf.Max(1, Mathf.RoundToInt(amount * goldMultiplier * diffGoldMult));
             inRunGold += actualGold;
             OnGoldChanged?.Invoke(inRunGold);
         }

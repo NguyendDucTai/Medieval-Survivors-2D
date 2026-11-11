@@ -123,9 +123,9 @@
   * **Tác nhân:** Người chơi hoàn thành các cột mốc thử thách tại Menu chọn tướng (`MainMenuManager.cs`).
   * **Kho tài nguyên có sẵn:** Tận dụng 3 bộ spritesheet còn dư trong 27 file gốc (`cung_thu_*`, `hero_*`, `phap_su_*`), cắt trực tiếp Frame 0 của hoạt ảnh `_Idle.png` để hiển thị lên UI Hero Selection (tuân thủ 100% nguyên tắc không tạo thêm file PNG đơn lẻ trong `Assets/Sprites/Characters/`).
   * **Cơ chế:** Ban đầu 3 tướng này hiển thị bóng đen (Silhouette) trong `Frame_HeroSelection.png` kèm điều kiện mở khóa:
-    * **Tướng thứ 7:** Sống sót đủ 20 phút tại map Scorching Desert.
-    * **Tướng thứ 8:** Tiêu diệt tổng cộng 10 Boss Golem qua các trận đấu.
-    * **Tướng thứ 9:** Đạt mốc 50.000 Vàng tích lũy trong phần MetaProgression (hoặc dùng cổ vật Greed Coin đạt cấp tối đa trong 5 trận).
+    * **Valen (Sát Thủ Bóng Đêm):** Sống sót tối thiểu 10 phút (600 giây) tại bản đồ bất kỳ ở chế độ **MEDIUM** trở lên.
+    * **Aurelius (Đại Pháp Sư Sét):** Hạ gục Siêu Trùm Boss Golem (ở phút 10:00) tại chế độ **HARD** trên bất kỳ bản đồ nào.
+    * **Aeris (Xạ Thủ Thần Phong):** Chiêu mộ trực tiếp bằng 10.000 Vàng từ kho quỹ trong bảng chọn tướng.
 
 * **UC-04: Sách Cổ Thư & Hệ Thống Thành Tựu (Grimoire & Milestones)**
   * **Tác nhân:** Người chơi truy cập từ Menu chính (`MainMenuManager.cs`).

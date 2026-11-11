@@ -211,7 +211,8 @@ namespace VampireSurvivors.Collectibles
             // If Red Gem was collected, show floating text
             if (isRedGem && UI.DamageNumberPool.Instance != null)
             {
-                UI.DamageNumberPool.Instance.SpawnExp(expAmount, transform.position, true);
+                float displayExp = expAmount * (playerStats != null ? playerStats.expMultiplier : 1f) * Core.DifficultyManager.GetExpMultiplier();
+                UI.DamageNumberPool.Instance.SpawnExp(displayExp, transform.position, true);
             }
 
             gameObject.SetActive(false);

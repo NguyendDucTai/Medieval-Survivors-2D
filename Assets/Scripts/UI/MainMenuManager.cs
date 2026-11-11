@@ -46,22 +46,22 @@ namespace VampireSurvivors.UI
                     float bestTime = 0f;
                     if (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
                     {
-                        bestTime = VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSeconds;
+                        bestTime = VampireSurvivors.Data.SaveManager.Instance.Data.bestSurvivalSecondsMediumOrHard;
                     }
                     int m = Mathf.FloorToInt(bestTime / 60f);
                     int s = Mathf.FloorToInt(bestTime % 60f);
                     int pct = Mathf.Clamp(Mathf.RoundToInt((bestTime / 600f) * 100f), 0, 100);
-                    return $"{m:00}:{s:00} / 10:00 ({pct}%)" + (bestTime >= 600f ? " - ĐẠT!" : "");
+                    return $"{m:00}:{s:00} / 10:00 [MEDIUM+] ({pct}%)" + (bestTime >= 600f ? " - ĐẠT!" : "");
                 }
                 else if (heroKey == "Archmage")
                 {
                     int kills = 0;
                     if (VampireSurvivors.Data.SaveManager.Instance != null && VampireSurvivors.Data.SaveManager.Instance.Data != null)
                     {
-                        kills = VampireSurvivors.Data.SaveManager.Instance.Data.lifetimeBossKills;
+                        kills = VampireSurvivors.Data.SaveManager.Instance.Data.hardGolemKills;
                     }
-                    int pct = Mathf.Clamp(Mathf.RoundToInt((kills / 5f) * 100f), 0, 100);
-                    return $"{kills} / 5 Trùm ({pct}%)" + (kills >= 5 ? " - ĐẠT!" : "");
+                    int pct = kills >= 1 ? 100 : 0;
+                    return $"{kills} / 1 Trùm Golem [HARD] ({pct}%)" + (kills >= 1 ? " - ĐẠT!" : "");
                 }
                 else if (heroKey == "Archer")
                 {
@@ -94,6 +94,7 @@ namespace VampireSurvivors.UI
         public bool isMenuOpen = true;
         public int selectedHeroIndex = 0;
         public int selectedMapIndex = 0;
+        public int selectedDifficultyIndex = 0;
 
         [Header("Hero Catalog")]
         public List<HeroData> heroes = new List<HeroData>();
@@ -139,6 +140,10 @@ namespace VampireSurvivors.UI
         private Text txtMapTitle;
         private Text txtMapDifficulty;
         private Text txtMapDescription;
+        private List<Button> difficultyButtons = new List<Button>();
+        private List<Image> difficultyButtonImages = new List<Image>();
+        private List<Outline> difficultyButtonOutlines = new List<Outline>();
+        private List<Text> difficultyButtonTexts = new List<Text>();
 
         // Options UI references
         private Slider sliderMusic;
@@ -160,6 +165,7 @@ namespace VampireSurvivors.UI
         private Sprite sprBtnGrimoire;
         private Sprite sprHeroLocked;
         private Sprite sprHeroBuy;
+        private Sprite sprBtnNormal;
 
         private Dictionary<GameObject, Coroutine> runningModalAnims = new Dictionary<GameObject, Coroutine>();
 
@@ -204,6 +210,7 @@ namespace VampireSurvivors.UI
             sprBtnGrimoire = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Grimoire.png");
             sprHeroLocked = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Hero_Locked.png");
             sprHeroBuy = LoadSpriteAtPath("Assets/Sprites/UI/Btn_Hero_Buy.png");
+            sprBtnNormal = LoadSpriteAtPath("Assets/Sprites/UI/Button_Normal.png");
         }
 
         private void Start()
@@ -217,6 +224,7 @@ namespace VampireSurvivors.UI
                 PlayerPrefs.Save();
             }
             selectedMapIndex = Mathf.Clamp(PlayerPrefs.GetInt("SelectedMapIndex", 0), 0, maps.Count - 1);
+            selectedDifficultyIndex = DifficultyManager.GetCurrentDifficultyIndex();
 
             BuildMenuUI();
 
@@ -240,6 +248,10 @@ namespace VampireSurvivors.UI
             {
                 Time.timeScale = 0f;
                 isMenuOpen = true;
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.StopBGM();
+                }
             }
         }
 
@@ -418,8 +430,8 @@ namespace VampireSurvivors.UI
                 armor = 0,
                 passiveDescription = "Vung lưỡi đao bóng đêm tím xuyên giáp cực nhanh. Tốc độ di chuyển phi phàm giúp né đòn quái vật linh hoạt.",
                 isStarter = false,
-                unlockConditionText = "Sống sót tối thiểu 10 phút (600 giây) trong 1 trận chiến bất kỳ.",
-                unlockTip = "Thử thách Sinh Tồn"
+                unlockConditionText = "Sống sót tối thiểu 10 phút (600 giây) tại bản đồ bất kỳ ở chế độ MEDIUM trở lên.",
+                unlockTip = "Thử thách Độ Khó (Medium+)"
             });
 
             // 3. STARTER: Mage (Ignis)
@@ -450,8 +462,8 @@ namespace VampireSurvivors.UI
                 armor = 1,
                 passiveDescription = "Triệu hồi các tia sấm sét uy lực từ trên trời giáng thẳng xuống đầu kẻ địch nguy hiểm nhất.",
                 isStarter = false,
-                unlockConditionText = "Hạ gục tổng cộng 5 Đại Trùm (Golem / Trùm đợt quái qua các trận).",
-                unlockTip = "Thử thách Diệt Trùm"
+                unlockConditionText = "Hạ gục Siêu Trùm Boss Golem (ở phút 10:00) tại chế độ HARD trên bất kỳ bản đồ nào.",
+                unlockTip = "Thử thách Diệt Trùm (Hard)"
             });
 
             // 5. STARTER: Ranger (Sylph)
@@ -1193,7 +1205,7 @@ namespace VampireSurvivors.UI
             // Map Details Text Panel on Parchment - Centered dark medieval lettering
             detailsBoxGO = CreateUIObject("MapDetailsBox", frameGO.transform);
             RectTransform dRect = detailsBoxGO.GetComponent<RectTransform>();
-            dRect.anchoredPosition = new Vector2(0, -95);
+            dRect.anchoredPosition = new Vector2(0, -90);
             dRect.sizeDelta = new Vector2(680, 95);
 
             UIButtonJuice dj = detailsBoxGO.AddComponent<UIButtonJuice>();
@@ -1214,12 +1226,72 @@ namespace VampireSurvivors.UI
             txtMapDescription = CreateText("TxtDesc", detailsBoxGO.transform, "Mô tả map...", 14, FontStyle.Italic, new Color(0.22f, 0.20f, 0.18f), TextAnchor.MiddleCenter, font);
             txtMapDescription.GetComponent<RectTransform>().sizeDelta = new Vector2(660, 36);
 
+            // UC-06: 3-Mode Difficulty Selector Row (EASY / MEDIUM / HARD)
+            difficultyButtons.Clear();
+            difficultyButtonImages.Clear();
+            difficultyButtonOutlines.Clear();
+            difficultyButtonTexts.Clear();
+
+            GameObject diffGroupGO = CreateUIObject("DifficultyButtonGroup", frameGO.transform);
+            RectTransform diffGroupRect = diffGroupGO.GetComponent<RectTransform>();
+            diffGroupRect.anchoredPosition = new Vector2(0, -162);
+            diffGroupRect.sizeDelta = new Vector2(620, 40);
+
+            HorizontalLayoutGroup diffHlg = diffGroupGO.AddComponent<HorizontalLayoutGroup>();
+            diffHlg.spacing = 22f;
+            diffHlg.childAlignment = TextAnchor.MiddleCenter;
+            diffHlg.childControlWidth = false;
+            diffHlg.childControlHeight = false;
+            diffHlg.childForceExpandWidth = false;
+            diffHlg.childForceExpandHeight = false;
+
+            string[] diffLabels = new string[] { "EASY", "MEDIUM", "HARD" };
+            for (int i = 0; i < 3; i++)
+            {
+                int diffIdx = i;
+                GameObject btnDiffGO = CreateUIObject($"Btn_Difficulty_{diffLabels[i]}", diffGroupGO.transform);
+                RectTransform btnDiffRect = btnDiffGO.GetComponent<RectTransform>();
+                btnDiffRect.sizeDelta = new Vector2(180, 42);
+
+                Image btnImg = btnDiffGO.AddComponent<Image>();
+                if (sprBtnNormal != null)
+                {
+                    btnImg.sprite = sprBtnNormal;
+                    btnImg.type = Image.Type.Sliced;
+                }
+
+                Outline btnOutline = btnDiffGO.AddComponent<Outline>();
+                btnOutline.effectDistance = new Vector2(2.5f, -2.5f);
+
+                Button btnComp = btnDiffGO.AddComponent<Button>();
+                btnComp.targetGraphic = btnImg;
+                btnComp.onClick.AddListener(() => SelectDifficulty(diffIdx));
+
+                UIButtonJuice diffJuice = btnDiffGO.AddComponent<UIButtonJuice>();
+                diffJuice.hoverScale = 1.08f;
+                diffJuice.pressScale = 0.92f;
+
+                Text lbl = CreateText("TxtMode", btnDiffGO.transform, diffLabels[i], 16, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter, font);
+                RectTransform lblRect = lbl.GetComponent<RectTransform>();
+                lblRect.anchorMin = Vector2.zero;
+                lblRect.anchorMax = Vector2.one;
+                lblRect.offsetMin = Vector2.zero;
+                lblRect.offsetMax = Vector2.zero;
+                AddOutline(lbl.gameObject, new Color(0.08f, 0.05f, 0.02f, 0.95f), 1.5f);
+
+                difficultyButtons.Add(btnComp);
+                difficultyButtonImages.Add(btnImg);
+                difficultyButtonOutlines.Add(btnOutline);
+                difficultyButtonTexts.Add(lbl);
+            }
+
             // CONFIRM button at bottom center
             CreateJuicyButton("Btn_ConfirmMap", frameGO.transform, new Vector2(0, -225), new Vector2(240, 75), () => OpenMapSelect(false), sprBtnConfirm, 1.08f, 0.92f, breathing: true);
 
             // Close (X) button at Top Right
             CreateJuicyButton("Btn_Close", frameGO.transform, new Vector2(550, 295), new Vector2(54, 54), () => OpenMapSelect(false), sprBtnClose, 1.25f, 0.85f);
 
+            UpdateDifficultyButtonsVisual();
             UpdateMapDisplay();
             mapSelectModal.SetActive(false);
         }
@@ -1776,14 +1848,125 @@ namespace VampireSurvivors.UI
             if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("click");
         }
 
+        public void SelectDifficulty(int diffIdx)
+        {
+            selectedDifficultyIndex = Mathf.Clamp(diffIdx, 0, 2);
+            DifficultyManager.SetDifficulty(selectedDifficultyIndex);
+            UpdateDifficultyButtonsVisual();
+            UpdateMapDisplay();
+
+            if (detailsBoxGO != null)
+            {
+                UIButtonJuice dj = detailsBoxGO.GetComponent<UIButtonJuice>();
+                if (dj != null) dj.Punch(1.08f);
+            }
+
+            if (AudioManager.Instance != null) AudioManager.Instance.PlaySfxByName("click");
+        }
+
+        private void UpdateDifficultyButtonsVisual()
+        {
+            selectedDifficultyIndex = DifficultyManager.GetCurrentDifficultyIndex();
+            string[] names = new string[] { "EASY", "MEDIUM", "HARD" };
+
+            for (int i = 0; i < difficultyButtonImages.Count; i++)
+            {
+                bool isSelected = (i == selectedDifficultyIndex);
+                Image img = difficultyButtonImages[i];
+                Outline ol = i < difficultyButtonOutlines.Count ? difficultyButtonOutlines[i] : null;
+                Text txt = i < difficultyButtonTexts.Count ? difficultyButtonTexts[i] : null;
+
+                if (isSelected)
+                {
+                    if (i == 0) // EASY - Emerald Green
+                    {
+                        if (img != null) img.color = new Color(0.22f, 0.72f, 0.35f, 1f);
+                        if (ol != null) ol.effectColor = new Color(0.55f, 1.0f, 0.65f, 1f);
+                        if (txt != null) txt.color = new Color(0.92f, 1.0f, 0.92f, 1f);
+                    }
+                    else if (i == 1) // MEDIUM - Golden Amber
+                    {
+                        if (img != null) img.color = new Color(0.88f, 0.62f, 0.14f, 1f);
+                        if (ol != null) ol.effectColor = new Color(1.0f, 0.92f, 0.35f, 1f);
+                        if (txt != null) txt.color = new Color(1.0f, 0.98f, 0.85f, 1f);
+                    }
+                    else // HARD - Crimson Red
+                    {
+                        if (img != null) img.color = new Color(0.82f, 0.18f, 0.18f, 1f);
+                        if (ol != null) ol.effectColor = new Color(1.0f, 0.45f, 0.35f, 1f);
+                        if (txt != null) txt.color = new Color(1.0f, 0.92f, 0.90f, 1f);
+                    }
+                    if (txt != null) txt.text = $"★ {names[i]} ★";
+                    if (img != null) img.transform.localScale = Vector3.one * 1.05f;
+                }
+                else
+                {
+                    if (img != null)
+                    {
+                        img.color = new Color(0.32f, 0.27f, 0.22f, 0.88f);
+                        img.transform.localScale = Vector3.one;
+                    }
+                    if (ol != null) ol.effectColor = new Color(0.15f, 0.10f, 0.06f, 0.85f);
+                    if (txt != null)
+                    {
+                        txt.color = new Color(0.76f, 0.70f, 0.62f, 0.92f);
+                        txt.text = names[i];
+                    }
+                }
+            }
+        }
+
         private void UpdateMapDisplay()
         {
             if (selectedMapIndex < 0 || selectedMapIndex >= maps.Count) return;
             MapData m = maps[selectedMapIndex];
 
+            selectedDifficultyIndex = DifficultyManager.GetCurrentDifficultyIndex();
+
             if (txtMapTitle != null) txtMapTitle.text = m.mapName;
-            if (txtMapDifficulty != null) txtMapDifficulty.text = $"Độ khó: {m.difficultyStars}   |   Thưởng: {m.goldMultiplier}";
-            if (txtMapDescription != null) txtMapDescription.text = $"{m.monstersDescription}\n{m.hazardDescription}";
+
+            if (selectedDifficultyIndex == 0)
+            {
+                // EASY mode: 100% IDENTICAL to the original map text, colors, and numbers!
+                if (txtMapDifficulty != null)
+                {
+                    txtMapDifficulty.color = new Color(0.55f, 0.15f, 0.10f);
+                    txtMapDifficulty.text = $"Độ khó: {m.difficultyStars}   |   Thưởng: {m.goldMultiplier}";
+                }
+                if (txtMapDescription != null)
+                {
+                    txtMapDescription.text = $"{m.monstersDescription}\n{m.hazardDescription}";
+                }
+            }
+            else
+            {
+                // MEDIUM / HARD mode: Scale up rewards, monster stats, and hazard descriptions!
+                string modeName = DifficultyManager.GetDifficultyName(selectedDifficultyIndex);
+                float diffGoldMult = DifficultyManager.GetGoldMultiplier(selectedDifficultyIndex);
+                float diffExpMult = DifficultyManager.GetExpMultiplier(selectedDifficultyIndex);
+
+                float totalGoldMult = m.goldBonusValue * diffGoldMult;
+                float baseMapExp = selectedMapIndex == 0 ? 1.0f : (selectedMapIndex == 1 ? 1.2f : (selectedMapIndex == 2 ? 1.3f : 2.0f));
+                float totalExpMult = baseMapExp * diffExpMult;
+
+                Color diffTextCol = (selectedDifficultyIndex == 1)
+                    ? new Color(0.65f, 0.35f, 0.05f)  // Medium amber
+                    : new Color(0.68f, 0.10f, 0.10f); // Hard crimson
+
+                string modeScalingNote = (selectedDifficultyIndex == 1)
+                    ? " [MEDIUM: Quái +45% Máu, +20% Tốc, Mật độ +35%, Hiệu ứng Map +25%]"
+                    : " [HARD: Quái +110% Máu, +40% Tốc, Mật độ +70%, Hiệu ứng +60%, Kèm Trùm Phụ!]";
+
+                if (txtMapDifficulty != null)
+                {
+                    txtMapDifficulty.color = diffTextCol;
+                    txtMapDifficulty.text = $"Độ khó: {m.difficultyStars} [{modeName}]   |   Thưởng: VÀNG x{totalGoldMult:F2} | EXP x{totalExpMult:F2}";
+                }
+                if (txtMapDescription != null)
+                {
+                    txtMapDescription.text = $"{m.monstersDescription}{modeScalingNote}\n{m.hazardDescription}";
+                }
+            }
 
             if (imgMapPreview != null && m.mapPreviewSprite != null)
             {
@@ -1819,6 +2002,7 @@ namespace VampireSurvivors.UI
         {
             if (open)
             {
+                UpdateDifficultyButtonsVisual();
                 UpdateMapDisplay();
                 AnimateModalOpen(mapSelectModal, mapFrameRect);
             }
@@ -1958,10 +2142,12 @@ namespace VampireSurvivors.UI
                 PlayerPrefs.Save();
             }
 
-            Debug.Log($"<color=green>[START BATTLE]</color> Hero: {heroes[selectedHeroIndex].heroName}, Map: {maps[selectedMapIndex].mapName}");
+            Debug.Log($"<color=green>[START BATTLE]</color> Hero: {heroes[selectedHeroIndex].heroName}, Map: {maps[selectedMapIndex].mapName}, Difficulty: {DifficultyManager.GetDifficultyName()}");
 
             if (AudioManager.Instance != null)
             {
+                AudioManager.Instance.SetBgmDucking(false, 0.35f, 0.15f);
+                AudioManager.Instance.PlayBGM();
                 AudioManager.Instance.PlaySfxByName("click");
             }
 
@@ -1976,10 +2162,21 @@ namespace VampireSurvivors.UI
             {
                 PlayerPrefs.SetFloat("SelectedMapGoldBonus", maps[selectedMapIndex].goldBonusValue);
                 PlayerPrefs.SetInt("SelectedMapIndex", selectedMapIndex);
+                PlayerPrefs.SetInt(DifficultyManager.PrefKeyDifficulty, selectedDifficultyIndex);
                 PlayerPrefs.Save();
             }
 
             ApplySelectedMapToEnvironment();
+
+            if (Wave.WaveManager.Instance != null)
+            {
+                Wave.WaveManager.Instance.ResetWaveState();
+            }
+
+            if (Environment.Hazards.MapHazardManager.Instance != null)
+            {
+                Environment.Hazards.MapHazardManager.Instance.ConfigureForMap(selectedMapIndex);
+            }
 
             if (menuCanvas != null)
             {

@@ -17,6 +17,8 @@ namespace VampireSurvivors.Data
         public float bestSurvivalSeconds = 0f;
         public int highestLevelReached = 1;
         public int lifetimeBossKills = 0;
+        public float bestSurvivalSecondsMediumOrHard = 0f;
+        public int hardGolemKills = 0;
 
         // Bestiary Species Kill Counts (UC-04 Grimoire)
         public int slimeKills = 0;

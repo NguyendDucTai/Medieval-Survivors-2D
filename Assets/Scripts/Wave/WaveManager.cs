@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using VampireSurvivors.Core;
 using VampireSurvivors.Enemies;
 using VampireSurvivors.Player;
 
@@ -139,8 +140,10 @@ namespace VampireSurvivors.Wave
             // Check for Milestones and Events
             CheckWaveEvents();
 
-            // Dynamic Spawn Rate: starts at 1.4s per spawn, ramps down to 0.4s as game progresses
-            float currentSpawnInterval = Mathf.Clamp(1.4f - (gameTimer / 400f), 0.35f, 1.4f);
+            // Dynamic Spawn Rate: starts at 1.4s per spawn, ramps down to 0.35s, scaled by Difficulty density
+            float densityMult = DifficultyManager.GetSpawnDensityMultiplier();
+            float baseInterval = Mathf.Clamp(1.4f - (gameTimer / 400f), 0.35f, 1.4f);
+            float currentSpawnInterval = Mathf.Max(0.20f, baseInterval / densityMult);
             spawnTicker += Time.deltaTime;
 
             if (spawnTicker >= currentSpawnInterval)
@@ -268,13 +271,20 @@ namespace VampireSurvivors.Wave
 
         private void SpawnRegularEnemy()
         {
-            if (ActiveEnemyCount >= maxEnemiesAlive) return;
+            float densityMult = DifficultyManager.GetSpawnDensityMultiplier();
+            int effectiveMaxEnemies = Mathf.RoundToInt(maxEnemiesAlive * densityMult);
+            if (ActiveEnemyCount >= effectiveMaxEnemies) return;
 
-            // Group spawn: 2 to 3 enemies per burst for exciting cluster action
-            int burstCount = UnityEngine.Random.Range(2, 4);
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+
+            // Group spawn: 2 to 3 enemies per burst (scaled by difficulty density)
+            int baseBurst = UnityEngine.Random.Range(2, 4);
+            int burstCount = Mathf.Max(2, Mathf.RoundToInt(baseBurst * densityMult));
             for (int i = 0; i < burstCount; i++)
             {
-                if (ActiveEnemyCount >= maxEnemiesAlive) break;
+                if (ActiveEnemyCount >= effectiveMaxEnemies) break;
 
                 GameObject selectedPrefab = PickEnemyForCurrentTime();
                 if (selectedPrefab == null) continue;
@@ -282,14 +292,15 @@ namespace VampireSurvivors.Wave
                 Vector3 spawnPos = GetRandomSpawnPosition();
                 GameObject enemyGO = Instantiate(selectedPrefab, spawnPos, Quaternion.identity);
 
-                // Scale stats by time (+4% HP per minute)
+                // Scale stats by time (+4% HP per minute) and UC-06 Difficulty Mode
                 float minutesPassed = gameTimer / 60f;
                 EnemyStats stats = enemyGO.GetComponent<EnemyStats>();
                 if (stats != null)
                 {
-                    stats.maxHealth *= (1f + (minutesPassed * 0.04f));
+                    stats.maxHealth *= (1f + (minutesPassed * 0.04f)) * hpMult;
                     stats.currentHealth = stats.maxHealth;
-                    stats.attackDamage *= (1f + (minutesPassed * 0.03f));
+                    stats.attackDamage *= (1f + (minutesPassed * 0.03f)) * dmgMult;
+                    stats.moveSpeed *= speedMult;
                     if (goldCoinPrefab != null) stats.goldCoinPrefab = goldCoinPrefab;
                 }
             }
@@ -338,7 +349,13 @@ namespace VampireSurvivors.Wave
                 Debug.Log($"<color=red>[WAVE EVENT]</color> {bannerMessage}");
             }
 
-            for (int i = 0; i < count; i++)
+            float densityMult = DifficultyManager.GetSpawnDensityMultiplier();
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+            int scaledCount = Mathf.Max(count, Mathf.RoundToInt(count * densityMult));
+
+            for (int i = 0; i < scaledCount; i++)
             {
                 if (prefab != null)
                 {
@@ -347,7 +364,10 @@ namespace VampireSurvivors.Wave
                     EnemyStats stats = go.GetComponent<EnemyStats>();
                     if (stats != null)
                     {
-                        stats.moveSpeed *= 1.25f; // Fast swarm
+                        stats.maxHealth *= hpMult;
+                        stats.currentHealth = stats.maxHealth;
+                        stats.attackDamage *= dmgMult;
+                        stats.moveSpeed *= 1.25f * speedMult; // Fast swarm
                     }
                 }
                 yield return new WaitForSeconds(0.12f);
@@ -399,10 +419,15 @@ namespace VampireSurvivors.Wave
             // Right vector is perpendicular to forward
             Vector2 right = new Vector2(-forward.y, forward.x);
 
-            float swarmChargeSpeed = 9.2f;
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+            int extraRows = DifficultyManager.GetCurrentDifficulty() == DifficultyMode.Hard ? 2 : (DifficultyManager.GetCurrentDifficulty() == DifficultyMode.Medium ? 1 : 0);
+            int totalRows = rows + extraRows;
+            float swarmChargeSpeed = 9.2f * speedMult;
 
             // Spawn rows forming a unified V / Triangle wedge that charges together
-            for (int r = 0; r < rows; r++)
+            for (int r = 0; r < totalRows; r++)
             {
                 int countInRow = r + 1; // Row 0 has 1 (apex), Row 1 has 2, Row 2 has 3, etc.
                 float rowDepth = r * spacing * 1.15f;
@@ -420,9 +445,9 @@ namespace VampireSurvivors.Wave
                     EnemyStats stats = batGO.GetComponent<EnemyStats>();
                     if (stats != null)
                     {
-                        stats.maxHealth = Mathf.Max(stats.maxHealth, 35f);
+                        stats.maxHealth = Mathf.Max(stats.maxHealth, 35f) * hpMult;
                         stats.currentHealth = stats.maxHealth;
-                        stats.attackDamage = 12f;
+                        stats.attackDamage = 12f * dmgMult;
                         stats.moveSpeed = swarmChargeSpeed;
                     }
 
@@ -458,18 +483,23 @@ namespace VampireSurvivors.Wave
             if (basePrefab == null) basePrefab = slimePrefab;
             if (basePrefab == null) return;
 
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+
             Vector3 pos = GetRandomSpawnPosition();
             GameObject bossGO = Instantiate(basePrefab, pos, Quaternion.identity);
             bossGO.transform.localScale = Vector3.one * scale;
 
+            float scaledHp = Mathf.Round(hp * hpMult);
             EnemyStats stats = bossGO.GetComponent<EnemyStats>();
             if (stats != null)
             {
                 stats.enemyName = title;
-                stats.maxHealth = hp;
-                stats.currentHealth = hp;
-                stats.moveSpeed = speed;
-                stats.attackDamage = 25f;
+                stats.maxHealth = scaledHp;
+                stats.currentHealth = scaledHp;
+                stats.moveSpeed = speed * speedMult;
+                stats.attackDamage = 25f * dmgMult;
                 stats.isBoss = true;
                 stats.bossChestPrefab = bossChestPrefab;
             }
@@ -478,24 +508,29 @@ namespace VampireSurvivors.Wave
             bc.bossTitle = title;
 
             OnWaveBanner?.Invoke($"👑 TRÙM XUẤT HIỆN: {title.ToUpper()}!");
-            Debug.Log($"<color=orange>[BOSS SPAWNED]</color> {title} with {hp} HP!");
+            Debug.Log($"<color=orange>[BOSS SPAWNED]</color> {title} with {scaledHp} HP (Mode: {DifficultyManager.GetDifficultyName()})!");
         }
 
         public void SpawnWorldBoss()
         {
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+
             GameObject prefab = bossGolemPrefab != null ? bossGolemPrefab : skeletonPrefab;
             Vector3 pos = GetRandomSpawnPosition();
             GameObject bossGO = Instantiate(prefab, pos, Quaternion.identity);
             bossGO.transform.localScale = Vector3.one * 2.5f;
 
+            float scaledHp = Mathf.Round(8500f * hpMult);
             EnemyStats stats = bossGO.GetComponent<EnemyStats>();
             if (stats != null)
             {
                 stats.enemyName = "Colossal Stone Golem";
-                stats.maxHealth = 8500f;
-                stats.currentHealth = 8500f;
-                stats.moveSpeed = 2.4f;
-                stats.attackDamage = 50f;
+                stats.maxHealth = scaledHp;
+                stats.currentHealth = scaledHp;
+                stats.moveSpeed = 2.4f * speedMult;
+                stats.attackDamage = 50f * dmgMult;
                 stats.isBoss = true;
                 stats.bossChestPrefab = bossChestPrefab;
             }
@@ -503,8 +538,17 @@ namespace VampireSurvivors.Wave
             BossController bc = bossGO.AddComponent<BossController>();
             bc.bossTitle = "Colossal Stone Golem (Đại Trùm Thần Thạch)";
 
-            OnWaveBanner?.Invoke("🗿 ĐẠI TRÙM THẾ GIỚI: GOLEM KHỔNG LỒ XUẤT HIỆN!");
-            Debug.Log("<color=red>★★ [WORLD BOSS SPAWNED] ★★</color> Colossal Stone Golem (8500 HP)!");
+            if (DifficultyManager.GetCurrentDifficulty() == DifficultyMode.Hard && skeletonPrefab != null)
+            {
+                SpawnMiniBoss(skeletonPrefab, "Golem Escort Warlord (Hộ Vệ Thần Thạch)", 3800f, 2.8f, 2.2f);
+                OnWaveBanner?.Invoke("🗿 ĐẠI TRÙM THẾ GIỚI + HỘ VỆ XƯƠNG XUẤT HIỆN (HARD MODE)!");
+            }
+            else
+            {
+                OnWaveBanner?.Invoke("🗿 ĐẠI TRÙM THẾ GIỚI: GOLEM KHỔNG LỒ XUẤT HIỆN!");
+            }
+
+            Debug.Log($"<color=red>★★ [WORLD BOSS SPAWNED] ★★</color> Colossal Stone Golem ({scaledHp} HP, Mode: {DifficultyManager.GetDifficultyName()})!");
         }
 
         public void SpawnTestMiniBoss()
@@ -585,6 +629,10 @@ namespace VampireSurvivors.Wave
             Vector2 center = playerTransform.position;
             List<PlantRingMember> ringMembers = new List<PlantRingMember>();
 
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+
             float angleStep = 360f / count;
 
             // 1. Dần dần tạo thành 1 vòng tròn hoàn chỉnh quanh người chơi
@@ -603,10 +651,10 @@ namespace VampireSurvivors.Wave
                     if (stats != null)
                     {
                         stats.enemyName = "Living Plant (Hoa Ăn Thịt)";
-                        stats.maxHealth = 1500f; // High HP: player must take damage to brute-force through!
-                        stats.currentHealth = 1500f;
-                        stats.attackDamage = 18f;
-                        stats.moveSpeed = 0.5f;
+                        stats.maxHealth = 1500f * hpMult; // High HP: player must take damage to brute-force through!
+                        stats.currentHealth = stats.maxHealth;
+                        stats.attackDamage = 18f * dmgMult;
+                        stats.moveSpeed = 0.5f * speedMult;
                         stats.expValue = 40f;
                         if (goldCoinPrefab != null) stats.goldCoinPrefab = goldCoinPrefab;
                     }
@@ -624,12 +672,12 @@ namespace VampireSurvivors.Wave
 
             yield return new WaitForSeconds(0.8f);
 
-            // 3. Thu dần vòng tròn lại với tốc độ rất chậm (0.18m/s)
+            // 3. Thu dần vòng tròn lại với tốc độ rất chậm (0.18m/s * speedMult)
             foreach (var m in ringMembers)
             {
                 if (m != null)
                 {
-                    m.shrinkSpeed = 0.18f;
+                    m.shrinkSpeed = 0.18f * speedMult;
                     m.StartShrinking();
                 }
             }
@@ -686,6 +734,12 @@ namespace VampireSurvivors.Wave
                 VampireSurvivors.Audio.AudioManager.Instance.PlaySfxByName("shoot");
             }
 
+            float hpMult = DifficultyManager.GetHealthMultiplier();
+            float speedMult = DifficultyManager.GetSpeedMultiplier();
+            float dmgMult = DifficultyManager.GetDamageMultiplier();
+            float densityMult = DifficultyManager.GetSpawnDensityMultiplier();
+            int effectiveMaxCapacity = Mathf.RoundToInt(maxCapacity * densityMult);
+
             float timer = 0f;
             float spawnTick = 0.12f;
             float nextCleanupTime = 1.0f;
@@ -709,8 +763,8 @@ namespace VampireSurvivors.Wave
                 if (progress >= 0.67f)
                 {
                     // Phase 3: Final 33% (Death Surge)
-                    currentSpeed = Mathf.Max(moveSpeed, 2.65f);
-                    currentDamage = 18f;
+                    currentSpeed = Mathf.Max(moveSpeed, 2.65f) * speedMult;
+                    currentDamage = 18f * dmgMult;
                     spawnTick = 0.085f;
                     hordeColor = isGoblin ? new Color(1f, 0.35f, 0.35f) : new Color(0.95f, 0.70f, 0.90f);
 
@@ -723,8 +777,8 @@ namespace VampireSurvivors.Wave
                 else if (progress >= 0.33f)
                 {
                     // Phase 2: Middle 33% (Frenzy Surge)
-                    currentSpeed = Mathf.Max(moveSpeed, 2.3f);
-                    currentDamage = 15f;
+                    currentSpeed = Mathf.Max(moveSpeed, 2.3f) * speedMult;
+                    currentDamage = 15f * dmgMult;
                     spawnTick = 0.10f;
                     hordeColor = isGoblin ? new Color(1f, 0.5f, 0.5f) : new Color(0.80f, 0.85f, 1f);
 
@@ -737,8 +791,8 @@ namespace VampireSurvivors.Wave
                 else
                 {
                     // Phase 1: First 33% (Standard Surge)
-                    currentSpeed = Mathf.Max(moveSpeed, 2.0f);
-                    currentDamage = 12f;
+                    currentSpeed = Mathf.Max(moveSpeed, 2.0f) * speedMult;
+                    currentDamage = 12f * dmgMult;
                     spawnTick = 0.12f;
                 }
 
@@ -776,15 +830,15 @@ namespace VampireSurvivors.Wave
                 // 2. Dynamic Health based on player's level so good skills don't instantly trivialize the horde
                 int playerLvl = PlayerStats.Instance != null ? PlayerStats.Instance.currentLevel : 1;
                 float baseHordeHealth = isGoblin ? 220f : 160f;
-                float dynamicHealth = baseHordeHealth + (playerLvl * 14f);
+                float dynamicHealth = (baseHordeHealth + (playerLvl * 14f)) * hpMult;
 
                 // 3. Continuous swarm spawning to keep screen densely populated ("kín map")
-                int needed = maxCapacity - ActiveEnemyCount;
+                int needed = effectiveMaxCapacity - ActiveEnemyCount;
 
                 if (needed > 0)
                 {
-                    // Spawn a cluster of 3 to 6 enemies per tick
-                    int burst = Mathf.Min(needed, UnityEngine.Random.Range(3, 7));
+                    // Spawn a cluster of 3 to 6 enemies per tick (scaled by difficulty density)
+                    int burst = Mathf.Min(needed, Mathf.RoundToInt(UnityEngine.Random.Range(3, 7) * densityMult));
 
                     // Pick a random base arc along the camera perimeter so enemies arrive in natural clusters
                     float baseAngle = UnityEngine.Random.Range(0f, 360f);
