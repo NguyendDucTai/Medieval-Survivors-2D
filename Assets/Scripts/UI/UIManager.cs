@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -636,6 +636,12 @@ namespace VampireSurvivors.UI
                     GameObject lvlGO = new GameObject("LevelUpUI");
                     levelUpUI = lvlGO.AddComponent<LevelUpUI>();
                 }
+            }
+
+            // 9. Ensure Touch Virtual Joystick exists for mobile / touch controls
+            if (VirtualJoystick.Instance == null)
+            {
+                VirtualJoystick.CreateProceduralJoystick(hudRoot, canvas);
             }
         }
 

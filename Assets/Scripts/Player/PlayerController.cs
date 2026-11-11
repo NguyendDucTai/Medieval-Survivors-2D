@@ -29,6 +29,7 @@ namespace VampireSurvivors.Player
         }
 
         public static PlayerController Instance;
+        private static Transform cachedMainCam;
 
         private void Awake()
         {
@@ -150,22 +151,40 @@ namespace VampireSurvivors.Player
                 catch { }
             }
 
-            moveInput = new Vector2(moveX, moveY).normalized;
+            // Check Virtual Joystick input for mobile touch controls
+            Vector2 joyInput = Vector2.zero;
+            if (UI.VirtualJoystick.Instance != null && UI.VirtualJoystick.Instance.InputVector.sqrMagnitude > 0.001f)
+            {
+                joyInput = UI.VirtualJoystick.Instance.InputVector;
+            }
+
+            if (joyInput.sqrMagnitude > 0.001f)
+            {
+                moveInput = joyInput.sqrMagnitude > 1f ? joyInput.normalized : joyInput;
+            }
+            else
+            {
+                moveInput = new Vector2(moveX, moveY).normalized;
+            }
+
             if (moveInput.sqrMagnitude > 0.01f)
             {
-                lastFacingDirection = moveInput;
+                lastFacingDirection = moveInput.normalized;
             }
 
-            // Flip sprite based on movement direction
-            if (spriteRenderer != null && moveX != 0)
+            // Flip sprite based on movement direction (handles both keyboard and touch joystick)
+            if (spriteRenderer != null && Mathf.Abs(moveInput.x) > 0.01f)
             {
-                spriteRenderer.flipX = moveX < 0;
+                spriteRenderer.flipX = moveInput.x < 0;
             }
 
-            // Dynamic Y-Sorting for authentic 2.5D top-down layering
+            // Dynamic Y-Sorting for authentic 2.5D top-down layering (camera-relative to prevent overflow/underflow in infinite worlds)
             if (spriteRenderer != null)
             {
-                spriteRenderer.sortingOrder = 1000 - (int)((transform.position.y - 0.25f) * 16f);
+                if (cachedMainCam == null && Camera.main != null) cachedMainCam = Camera.main.transform;
+                float camY = cachedMainCam != null ? cachedMainCam.position.y : 0f;
+                float relY = (transform.position.y - 0.25f) - camY;
+                spriteRenderer.sortingOrder = Mathf.Clamp(500 - Mathf.RoundToInt(relY * 16f), 50, 950);
             }
 
             // Update Animator parameters if present

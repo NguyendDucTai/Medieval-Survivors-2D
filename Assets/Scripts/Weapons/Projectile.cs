@@ -34,6 +34,12 @@ namespace VampireSurvivors.Weapons
 
             float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0, 0, angle);
+
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.sortingOrder = 955;
+            }
         }
 
         protected virtual void Update()

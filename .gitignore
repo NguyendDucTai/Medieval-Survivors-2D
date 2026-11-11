@@ -39,7 +39,13 @@ sysinfo.txt
 *.aab
 *.unitypackage
 .dotnet/
+.dotnet_home/
+.temp_dotnet/
 *.app
 crashlytics-build.properties
 scratch/
 *.zip
+.utmp/
+Marketing/
+HUONG_DAN.txt
+

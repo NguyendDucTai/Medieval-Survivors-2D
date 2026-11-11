@@ -42,6 +42,10 @@ namespace VampireSurvivors.Weapons
             transform.localScale = Vector3.one * (isCrit ? initialScale * 1.3f : initialScale);
 
             spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.sortingOrder = 960;
+            }
         }
 
         protected virtual void Update()

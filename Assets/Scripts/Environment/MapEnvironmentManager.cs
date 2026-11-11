@@ -20,7 +20,7 @@ namespace VampireSurvivors.Environment
         public int gridRows = 5;
 
         [Tooltip("Sorting layer order for background terrain tiles")]
-        public int sortingOrder = -10;
+        public int sortingOrder = -1000;
 
         public Sprite currentMapSprite;
         public int currentMapIndex = 1;
@@ -31,6 +31,7 @@ namespace VampireSurvivors.Environment
 
         private void Awake()
         {
+            sortingOrder = -1000;
             if (Instance == null)
             {
                 Instance = this;

@@ -15,6 +15,7 @@ namespace VampireSurvivors.Enemies
         private float lastAttackTime = -10f;
         public float attackCooldown = 0.35f; // Responsive contact damage tick
         private bool isDead = false;
+        private static Transform cachedMainCam;
 
         public void SetDead(bool dead)
         {
@@ -126,7 +127,10 @@ namespace VampireSurvivors.Enemies
 
             if (spriteRenderer != null)
             {
-                spriteRenderer.sortingOrder = 1000 - (int)((transform.position.y - 0.20f) * 16f);
+                if (cachedMainCam == null && Camera.main != null) cachedMainCam = Camera.main.transform;
+                float camY = cachedMainCam != null ? cachedMainCam.position.y : 0f;
+                float relY = (transform.position.y - 0.20f) - camY;
+                spriteRenderer.sortingOrder = Mathf.Clamp(500 - Mathf.RoundToInt(relY * 16f), 50, 950);
             }
 
                 if (chargeTimer >= maxChargeLifetime)
@@ -154,7 +158,10 @@ namespace VampireSurvivors.Enemies
 
             if (spriteRenderer != null)
             {
-                spriteRenderer.sortingOrder = 1000 - (int)((transform.position.y - 0.20f) * 16f);
+                if (cachedMainCam == null && Camera.main != null) cachedMainCam = Camera.main.transform;
+                float camY = cachedMainCam != null ? cachedMainCam.position.y : 0f;
+                float relY = (transform.position.y - 0.20f) - camY;
+                spriteRenderer.sortingOrder = Mathf.Clamp(500 - Mathf.RoundToInt(relY * 16f), 50, 950);
             }
         }
 
